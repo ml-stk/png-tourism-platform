@@ -23,9 +23,7 @@ function fixture(initial: Operator = base) {
       return { ...current };
     },
   };
-  const audit: AuditWriter = {
-    async record(event) { events.push({ action: event.action, metadata: event.metadata }); },
-  };
+  const audit: AuditWriter = { async record(event) { events.push({ action: event.action, metadata: event.metadata }); } };
   return { service: new OperatorService(repository, audit), events, get: () => ({ ...current }) };
 }
 
@@ -41,13 +39,13 @@ describe('OperatorService lifecycle', () => {
     const f = fixture();
     await expect(f.service.reject(base.id, '  Missing licence evidence  ', 'actor-1')).resolves.toMatchObject({ status: 'closed' });
     expect(f.events[0]).toEqual({ action: 'operator.rejected', metadata: { reason: 'Missing licence evidence' } });
-    await expect(f.service.reject(base.id, '   ')).rejects.toMatchObject<DomainError>({ code: 'VALIDATION_ERROR' });
+    await expect(f.service.reject(base.id, '   ')).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
   });
 
   it('enforces lifecycle transition order', async () => {
     const f = fixture({ ...base, status: 'suspended' });
-    await expect(f.service.approve(base.id)).rejects.toMatchObject<DomainError>({ code: 'CONFLICT' });
-    await expect(f.service.suspend(base.id, 'Reason')).rejects.toMatchObject<DomainError>({ code: 'CONFLICT' });
+    await expect(f.service.approve(base.id)).rejects.toMatchObject({ code: 'CONFLICT' });
+    await expect(f.service.suspend(base.id, 'Reason')).rejects.toMatchObject({ code: 'CONFLICT' });
     await expect(f.service.close(base.id, 'End of registration')).resolves.toMatchObject({ status: 'closed' });
   });
 
@@ -60,6 +58,6 @@ describe('OperatorService lifecycle', () => {
 
   it('blocks compliance changes on closed operators', async () => {
     const f = fixture({ ...base, status: 'closed' });
-    await expect(f.service.updateCompliance(base.id, 'compliant')).rejects.toMatchObject<DomainError>({ code: 'CONFLICT' });
+    await expect(f.service.updateCompliance(base.id, 'compliant', undefined)).rejects.toMatchObject({ code: 'CONFLICT' });
   });
 });

@@ -87,9 +87,9 @@ function authenticate(req: IncomingMessage, requestId: string): AuthorizationCon
   return { user, requestId };
 }
 
-function requiredString(body: Record<string, unknown>, field: string): string {
-  if (typeof body[field] !== 'string' || !body[field].trim()) { const error: any = new Error(`${field} is required`); error.code = 'VALIDATION_ERROR'; throw error; }
-  return body[field] as string;
+function requiredString(value: unknown, field: string): string {
+  if (typeof value !== 'string' || !value.trim()) { const error: any = new Error(`${field} is required`); error.code = 'VALIDATION_ERROR'; throw error; }
+  return value;
 }
 async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> { const chunks: Buffer[] = []; for await (const chunk of req) chunks.push(Buffer.from(chunk)); try { const parsed: unknown = JSON.parse(Buffer.concat(chunks).toString('utf8')); if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error(); return parsed as Record<string, unknown>; } catch { const error: any = new Error('Invalid JSON body'); error.code = 'VALIDATION_ERROR'; throw error; } }
 function send(res: ServerResponse, status: number, body: unknown) { res.statusCode = status; res.end(JSON.stringify(body)); }
