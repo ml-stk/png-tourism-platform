@@ -4,7 +4,7 @@ import { Pool } from 'pg';
 import { OperatorService } from '../services/operator-service';
 import { requirePermission, requireProvinceAccess, requireOperatorAccess } from '../auth/authorization';
 import type { AuthorizationContext, AuthenticatedUser } from '../auth/types';
-import type { ProvinceCode } from '../domain/types';
+import type { ComplianceStatus, ProvinceCode } from '../domain/types';
 import { PostgresAuditRepository, PostgresOperatorRepository, PostgresProvinceRepository } from '../persistence/postgres-repositories';
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
@@ -23,14 +23,44 @@ export function createApiServer() {
         requirePermission(context, 'operator:read');
         const provinceCode = url.searchParams.get('province') || undefined;
         if (provinceCode) requireProvinceAccess(context, provinceCode as ProvinceCode);
-        return send(res, 200, { data: await repositories.operators.list({ provinceCode }), requestId });
+        return send(res, 200, { data: await repositories.operators.list({ provinceCode, status: url.searchParams.get('status') || undefined, cursor: url.searchParams.get('cursor') || undefined }), requestId });
       }
-      if (req.method === 'GET' && url.pathname.startsWith('/api/v1/operators/')) {
-        const id = url.pathname.slice('/api/v1/operators/'.length);
-        if (!id || id.includes('/')) return send(res, 404, { error: { code: 'NOT_FOUND', message: 'Operator not found' }, requestId });
-        requirePermission(context, 'operator:read');
-        requireOperatorAccess(context, id);
-        return send(res, 200, { data: await operatorService.get(id), requestId });
+      if (url.pathname.startsWith('/api/v1/operators/')) {
+        const remainder = url.pathname.slice('/api/v1/operators/'.length);
+        const [id, action] = remainder.split('/');
+        if (!id || remainder.split('/').length > 2) return send(res, 404, { error: { code: 'NOT_FOUND', message: 'Operator route not found' }, requestId });
+        if (req.method === 'GET' && !action) {
+          requirePermission(context, 'operator:read');
+          requireOperatorAccess(context, id);
+          return send(res, 200, { data: await operatorService.get(id), requestId });
+        }
+        if (req.method === 'POST' && action) {
+          const operator = await operatorService.get(id);
+          requireProvinceAccess(context, operator.provinceCode);
+          const body = await readJson(req);
+          if (action === 'approve') {
+            requirePermission(context, 'operator:approve');
+            return send(res, 200, { data: await operatorService.approve(id, context.user.id, requestId), requestId });
+          }
+          if (action === 'reject') {
+            requirePermission(context, 'operator:approve');
+            return send(res, 200, { data: await operatorService.reject(id, requiredString(body.reason, 'reason'), context.user.id, requestId), requestId });
+          }
+          if (action === 'compliance') {
+            requirePermission(context, 'operator:manage_compliance');
+            const status = body.status;
+            if (typeof status !== 'string') return send(res, 400, { error: { code: 'VALIDATION_ERROR', message: 'status is required' }, requestId });
+            return send(res, 200, { data: await operatorService.updateCompliance(id, status as ComplianceStatus, typeof body.note === 'string' ? body.note : undefined, context.user.id, requestId), requestId });
+          }
+          if (action === 'suspend') {
+            requirePermission(context, 'operator:manage_status');
+            return send(res, 200, { data: await operatorService.suspend(id, requiredString(body.reason, 'reason'), context.user.id, requestId), requestId });
+          }
+          if (action === 'close') {
+            requirePermission(context, 'operator:manage_status');
+            return send(res, 200, { data: await operatorService.close(id, requiredString(body.reason, 'reason'), context.user.id, requestId), requestId });
+          }
+        }
       }
       if (req.method === 'POST' && url.pathname === '/api/v1/operators') {
         requirePermission(context, 'operator:register');
@@ -43,7 +73,7 @@ export function createApiServer() {
       if (req.method === 'GET' && url.pathname === '/api/v1/provinces') return send(res, 200, { data: await repositories.provinces.list(), requestId });
       return send(res, 404, { error: { code: 'NOT_FOUND', message: 'Route not found' }, requestId });
     } catch (error: any) {
-      const status = error?.code === 'UNAUTHORIZED' ? 401 : error?.code === 'FORBIDDEN' ? 403 : error?.code === 'NOT_FOUND' ? 404 : error?.code === 'VALIDATION_ERROR' ? 400 : 500;
+      const status = error?.code === 'UNAUTHORIZED' ? 401 : error?.code === 'FORBIDDEN' ? 403 : error?.code === 'NOT_FOUND' ? 404 : error?.code === 'VALIDATION_ERROR' ? 400 : error?.code === 'CONFLICT' ? 409 : 500;
       return send(res, status, { error: { code: error?.code || 'INTERNAL_ERROR', message: status === 500 ? 'Internal server error' : error.message }, requestId });
     }
   });
@@ -57,5 +87,9 @@ function authenticate(req: IncomingMessage, requestId: string): AuthorizationCon
   return { user, requestId };
 }
 
+function requiredString(value: unknown, field: string): string {
+  if (typeof value !== 'string' || !value.trim()) { const error: any = new Error(`${field} is required`); error.code = 'VALIDATION_ERROR'; throw error; }
+  return value;
+}
 async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> { const chunks: Buffer[] = []; for await (const chunk of req) chunks.push(Buffer.from(chunk)); try { const parsed: unknown = JSON.parse(Buffer.concat(chunks).toString('utf8')); if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error(); return parsed as Record<string, unknown>; } catch { const error: any = new Error('Invalid JSON body'); error.code = 'VALIDATION_ERROR'; throw error; } }
 function send(res: ServerResponse, status: number, body: unknown) { res.statusCode = status; res.end(JSON.stringify(body)); }

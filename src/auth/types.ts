@@ -13,6 +13,7 @@ export type PermissionCode =
   | 'operator:register'
   | 'operator:approve'
   | 'operator:manage_compliance'
+  | 'operator:manage_status'
   | 'content:read'
   | 'content:write'
   | 'content:publish'
