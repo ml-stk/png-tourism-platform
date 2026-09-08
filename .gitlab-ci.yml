@@ -1,0 +1,16 @@
+image: node:22-alpine
+
+stages:
+  - verify
+
+cache:
+  paths:
+    - node_modules/
+
+build:
+  stage: verify
+  script:
+    - npm install
+    - npm run build
+  rules:
+    - if: '$CI_COMMIT_BRANCH'
