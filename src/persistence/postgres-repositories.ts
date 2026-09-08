@@ -28,9 +28,8 @@ export class PostgresOperatorRepository implements OperatorRepository {
   }
   async update(operator: Operator, expectedStatus?: OperatorStatus) {
     const values: unknown[] = [operator.legalName, operator.tradingName ?? null, operator.provinceCode, operator.status, operator.complianceStatus, operator.updatedAt, operator.id];
-    const expected = expectedStatus ? ' and status = $8' : '';
     if (expectedStatus) values.push(expectedStatus);
-    const result = await this.pool.query(`update operators set legal_name=$1, trading_name=$2, province_code=$3, status=$4, compliance_status=$5, updated_at=$6 where id=$7${expected} returning id, legal_name, trading_name, province_code, status, compliance_status, created_at, updated_at`, values);
+    const result = await this.pool.query(`update operators set legal_name=$1, trading_name=$2, province_code=$3, status=$4, compliance_status=$5, updated_at=$6 where id=$7${expectedStatus ? ' and status = $8' : ''} returning id, legal_name, trading_name, province_code, status, compliance_status, created_at, updated_at`, values);
     return result.rows[0] ? toOperator(result.rows[0]) : null;
   }
 }
@@ -59,8 +58,8 @@ export class PostgresProvinceRepository implements ProvinceRepository {
 
 export class PostgresAuditRepository implements AuditWriter {
   constructor(private readonly pool: Pool) {}
-  async record(event: { actorId?: string; action: string; targetType: string; targetId: string; outcome: 'success' | 'failure'; requestId?: string }) {
-    await this.pool.query('insert into audit_events (actor_id,action,target_type,target_id,outcome,request_id) values ($1,$2,$3,$4,$5,$6)', [event.actorId ?? null,event.action,event.targetType,event.targetId,event.outcome,event.requestId ?? null]);
+  async record(event: { actorId?: string; action: string; targetType: string; targetId: string; outcome: 'success' | 'failure'; requestId?: string; metadata?: Record<string, unknown> }) {
+    await this.pool.query('insert into audit_events (actor_id,action,target_type,target_id,outcome,request_id,metadata) values ($1,$2,$3,$4,$5,$6,$7)', [event.actorId ?? null,event.action,event.targetType,event.targetId,event.outcome,event.requestId ?? null,event.metadata ? JSON.stringify(event.metadata) : null]);
   }
   async listForTarget(targetType: string, targetId: string): Promise<AuditEvent[]> {
     const result = await this.pool.query('select id,actor_id,action,target_type,target_id,outcome,occurred_at,request_id from audit_events where target_type=$1 and target_id=$2 order by occurred_at desc',[targetType,targetId]);

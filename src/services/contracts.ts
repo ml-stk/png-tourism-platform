@@ -25,5 +25,6 @@ export interface AuditWriter {
     targetId: string;
     outcome: 'success' | 'failure';
     requestId?: string;
+    metadata?: Record<string, unknown>;
   }): Promise<void>;
 }
