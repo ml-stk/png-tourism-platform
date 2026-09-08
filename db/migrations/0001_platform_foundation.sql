@@ -56,11 +56,13 @@ create table role_permissions (
 );
 
 create table user_roles (
+  id uuid primary key default gen_random_uuid(),
   user_id uuid not null references users(id) on delete cascade,
   role_id uuid not null references roles(id) on delete cascade,
   province_code text references provinces(code),
   operator_id uuid references operators(id),
-  primary key (user_id, role_id, province_code, operator_id)
+  unique (user_id, role_id, province_code, operator_id),
+  check (province_code is null or operator_id is null)
 );
 
 create table destinations (
@@ -108,7 +110,7 @@ create index idx_audit_actor on audit_events(actor_id, occurred_at desc);
 insert into roles (code, name, description) values
   ('platform_admin','Platform Administrator','Full platform administration and configuration'),
   ('tpa_regulator','TPA Regulatory Officer','Regulatory operator lifecycle and compliance'),
-  ('content_manager','Content Manager','Destination and tourism content management'),
+  ('content_manager','Content Manager','Tourism content management'),
   ('provincial_admin','Provincial Administrator','Province-scoped tourism administration'),
   ('operator','Tourism Operator','Own operator profile and permitted self-service actions'),
   ('analyst','Tourism Analyst','Read-only intelligence and reporting access')
@@ -151,15 +153,13 @@ select r.id, p.id from roles r join permissions p on p.code in (
 on conflict do nothing;
 
 insert into role_permissions (role_id, permission_id)
-select r.id, p.id from roles r join permissions p on p.code in (
-  'operator:read'
-) where r.code = 'operator'
+select r.id, p.id from roles r join permissions p on p.code in ('operator:read')
+where r.code = 'operator'
 on conflict do nothing;
 
 insert into role_permissions (role_id, permission_id)
-select r.id, p.id from roles r join permissions p on p.code in (
-  'content:read','intelligence:read'
-) where r.code = 'analyst'
+select r.id, p.id from roles r join permissions p on p.code in ('content:read','intelligence:read')
+where r.code = 'analyst'
 on conflict do nothing;
 
 -- Public-facing reads must be mediated by application services; do not expose

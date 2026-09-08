@@ -1,26 +1,18 @@
 import type { AuditEvent, Destination, Operator, Province } from '../domain/types';
+import type {
+  AuditWriter,
+  DestinationRepository as ServiceDestinationRepository,
+  OperatorRepository as ServiceOperatorRepository,
+  ProvinceRepository as ServiceProvinceRepository,
+} from '../services/contracts';
 import type { ID } from '../domain/types';
 
-export interface OperatorRepository {
-  getById(id: ID): Promise<Operator | undefined>;
-  create(operator: Operator): Promise<Operator>;
-  update(operator: Operator): Promise<Operator>;
-}
+/** Persistence contracts intentionally preserve the service-layer boundary. */
+export type OperatorRepository = ServiceOperatorRepository;
+export type DestinationRepository = ServiceDestinationRepository;
+export type ProvinceRepository = ServiceProvinceRepository;
 
-export interface DestinationRepository {
-  getById(id: ID): Promise<Destination | undefined>;
-  listPublished(): Promise<Destination[]>;
-  create(destination: Destination): Promise<Destination>;
-  update(destination: Destination): Promise<Destination>;
-}
-
-export interface ProvinceRepository {
-  getByCode(code: Province['code']): Promise<Province | undefined>;
-  list(): Promise<Province[]>;
-}
-
-export interface AuditRepository {
-  append(event: AuditEvent): Promise<void>;
+export interface AuditRepository extends AuditWriter {
   listForTarget(targetType: string, targetId: ID): Promise<AuditEvent[]>;
 }
 
@@ -30,3 +22,10 @@ export interface PlatformRepositories {
   provinces: ProvinceRepository;
   audit: AuditRepository;
 }
+
+/** Compile-time helper for adapters that persist domain entities. */
+export type PersistedEntities = {
+  operator: Operator;
+  destination: Destination;
+  province: Province;
+};
