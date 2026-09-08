@@ -1,0 +1,1 @@
+Phase 4 validation branch contains the complete destination/content implementation and documentation. CI must validate test, frontend build, and server build before merge.
