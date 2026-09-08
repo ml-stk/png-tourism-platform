@@ -2,11 +2,11 @@ import type { PermissionCode, RoleCode } from './types';
 
 const ROLE_PERMISSIONS: Record<RoleCode, readonly PermissionCode[]> = {
   platform_admin: [
-    'operator:read','operator:register','operator:approve','operator:manage_compliance',
+    'operator:read','operator:register','operator:approve','operator:manage_compliance','operator:manage_status',
     'content:read','content:write','content:publish','intelligence:read',
     'admin:manage_users','audit:read',
   ],
-  tpa_regulator: ['operator:read','operator:register','operator:approve','operator:manage_compliance','audit:read'],
+  tpa_regulator: ['operator:read','operator:register','operator:approve','operator:manage_compliance','operator:manage_status','audit:read'],
   content_manager: ['content:read','content:write','content:publish'],
   provincial_admin: ['operator:read','content:read','content:write','intelligence:read'],
   operator: ['operator:read'],

@@ -1,5 +1,5 @@
 import { Pool } from 'pg';
-import type { AuditEvent, Destination, Operator, Province, ProvinceCode } from '../domain/types';
+import type { AuditEvent, Destination, Operator, OperatorStatus, Province, ProvinceCode } from '../domain/types';
 import type { AuditWriter, DestinationRepository, OperatorRepository, ProvinceRepository } from '../services/contracts';
 
 const asProvinceCode = (value: string): ProvinceCode => value as ProvinceCode;
@@ -25,6 +25,13 @@ export class PostgresOperatorRepository implements OperatorRepository {
   async save(operator: Operator) {
     const result = await this.pool.query(`insert into operators (id, legal_name, trading_name, province_code, status, compliance_status, created_at, updated_at) values ($1,$2,$3,$4,$5,$6,$7,$8) returning id, legal_name, trading_name, province_code, status, compliance_status, created_at, updated_at`, [operator.id, operator.legalName, operator.tradingName ?? null, operator.provinceCode, operator.status, operator.complianceStatus, operator.createdAt, operator.updatedAt]);
     return toOperator(result.rows[0]);
+  }
+  async update(operator: Operator, expectedStatus?: OperatorStatus) {
+    const values: unknown[] = [operator.legalName, operator.tradingName ?? null, operator.provinceCode, operator.status, operator.complianceStatus, operator.updatedAt, operator.id];
+    const expected = expectedStatus ? ' and status = $8' : '';
+    if (expectedStatus) values.push(expectedStatus);
+    const result = await this.pool.query(`update operators set legal_name=$1, trading_name=$2, province_code=$3, status=$4, compliance_status=$5, updated_at=$6 where id=$7${expected} returning id, legal_name, trading_name, province_code, status, compliance_status, created_at, updated_at`, values);
+    return result.rows[0] ? toOperator(result.rows[0]) : null;
   }
 }
 
