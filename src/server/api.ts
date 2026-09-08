@@ -5,11 +5,11 @@ import { OperatorService } from '../services/operator-service';
 import { requirePermission, requireProvinceAccess, requireOperatorAccess } from '../auth/authorization';
 import type { AuthorizationContext, AuthenticatedUser } from '../auth/types';
 import type { ProvinceCode } from '../domain/types';
-import { PostgresAuditRepository, PostgresDestinationRepository, PostgresOperatorRepository, PostgresProvinceRepository } from '../persistence/postgres-repositories';
+import { PostgresAuditRepository, PostgresOperatorRepository, PostgresProvinceRepository } from '../persistence/postgres-repositories';
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-const repositories = { operators: new PostgresOperatorRepository(pool), destinations: new PostgresDestinationRepository(pool), provinces: new PostgresProvinceRepository(pool), audit: new PostgresAuditRepository(pool) };
-const operators = new OperatorService(repositories.operators, repositories.audit);
+const repositories = { operators: new PostgresOperatorRepository(pool), provinces: new PostgresProvinceRepository(pool), audit: new PostgresAuditRepository(pool) };
+const operatorService = new OperatorService(repositories.operators, repositories.audit);
 
 export function createApiServer() {
   return createServer(async (req, res) => {
@@ -23,20 +23,21 @@ export function createApiServer() {
         requirePermission(context, 'operator:read');
         const provinceCode = url.searchParams.get('province') || undefined;
         if (provinceCode) requireProvinceAccess(context, provinceCode as ProvinceCode);
-        const result = await repositories.operators.list({ provinceCode });
-        return send(res, 200, { data: result, requestId });
+        return send(res, 200, { data: await repositories.operators.list({ provinceCode }), requestId });
       }
       if (req.method === 'GET' && url.pathname.startsWith('/api/v1/operators/')) {
-        const id = url.pathname.split('/').pop()!;
+        const id = url.pathname.slice('/api/v1/operators/'.length);
+        if (!id || id.includes('/')) return send(res, 404, { error: { code: 'NOT_FOUND', message: 'Operator not found' }, requestId });
         requirePermission(context, 'operator:read');
         requireOperatorAccess(context, id);
-        return send(res, 200, { data: await operators.get(id), requestId });
+        return send(res, 200, { data: await operatorService.get(id), requestId });
       }
       if (req.method === 'POST' && url.pathname === '/api/v1/operators') {
         requirePermission(context, 'operator:register');
         const body = await readJson(req);
+        if (typeof body.legalName !== 'string' || typeof body.provinceCode !== 'string') return send(res, 400, { error: { code: 'VALIDATION_ERROR', message: 'legalName and provinceCode are required' }, requestId });
         requireProvinceAccess(context, body.provinceCode as ProvinceCode);
-        const data = await operators.register({ legalName: body.legalName, tradingName: body.tradingName, provinceCode: body.provinceCode, actorId: context.user.id, requestId });
+        const data = await operatorService.register({ legalName: body.legalName, tradingName: typeof body.tradingName === 'string' ? body.tradingName : undefined, provinceCode: body.provinceCode as ProvinceCode, actorId: context.user.id, requestId });
         return send(res, 201, { data, requestId });
       }
       if (req.method === 'GET' && url.pathname === '/api/v1/provinces') return send(res, 200, { data: await repositories.provinces.list(), requestId });
@@ -49,13 +50,12 @@ export function createApiServer() {
 }
 
 function authenticate(req: IncomingMessage, requestId: string): AuthorizationContext {
-  const subject = req.headers.authorization?.replace(/^Bearer\s+/i, '') || process.env.DEV_IDENTITY_SUBJECT;
+  const subject = req.headers.authorization?.replace(/^Bearer\s+/i, '') || (process.env.NODE_ENV !== 'production' ? process.env.DEV_IDENTITY_SUBJECT : undefined);
   if (!subject) { const error: any = new Error('Authentication required'); error.code = 'UNAUTHORIZED'; throw error; }
-  const user: AuthenticatedUser = { id: process.env.DEV_IDENTITY_USER_ID || '00000000-0000-0000-0000-000000000001', externalSubject: subject, email: process.env.DEV_IDENTITY_EMAIL || 'developer@pngtourism.local', displayName: 'Development User', roles: (process.env.DEV_IDENTITY_ROLES || 'platform_admin').split(',') as any };
+  const roles = (process.env.DEV_IDENTITY_ROLES || 'platform_admin').split(',').map((role) => role.trim()).filter(Boolean);
+  const user: AuthenticatedUser = { id: process.env.DEV_IDENTITY_USER_ID || '00000000-0000-0000-0000-000000000001', externalSubject: subject, email: process.env.DEV_IDENTITY_EMAIL || 'developer@pngtourism.local', displayName: 'Development User', roles: roles as AuthenticatedUser['roles'] };
   return { user, requestId };
 }
 
-async function readJson(req: IncomingMessage): Promise<any> { const chunks: Buffer[] = []; for await (const chunk of req) chunks.push(Buffer.from(chunk)); try { return JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch { const error: any = new Error('Invalid JSON body'); error.code = 'VALIDATION_ERROR'; throw error; } }
+async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> { const chunks: Buffer[] = []; for await (const chunk of req) chunks.push(Buffer.from(chunk)); try { const parsed: unknown = JSON.parse(Buffer.concat(chunks).toString('utf8')); if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error(); return parsed as Record<string, unknown>; } catch { const error: any = new Error('Invalid JSON body'); error.code = 'VALIDATION_ERROR'; throw error; } }
 function send(res: ServerResponse, status: number, body: unknown) { res.statusCode = status; res.end(JSON.stringify(body)); }
-
-if (process.env.START_API === 'true') createApiServer().listen(Number(process.env.PORT || 3000));
