@@ -1,0 +1,1 @@
+Acceptance: industry contracts compile, service boundary enforces active operators and governed publication, public discovery is explicitly published and province-aware, visitor leads target active operators, and regulatory data is excluded.
