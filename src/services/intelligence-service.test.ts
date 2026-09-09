@@ -1,12 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { IntelligenceService } from './intelligence-service';
 import type { ContentItem, Destination, Operator, Province } from '../domain/types';
-const provinces: Province[] = [{id:'p1',code:'NCD',name:'National Capital District',slug:'ncd'},{id:'p2',code:'ORO',name:'Oro',slug:'oro'}];
-const operator = (provinceCode: Operator['provinceCode']): Operator => ({id:`o-${provinceCode}`,legalName:`Operator ${provinceCode}`,provinceCode,status:'active',complianceStatus:'compliant',createdAt:'2026-09-08T00:00:00.000Z',updatedAt:'2026-09-08T00:00:00.000Z'});
-const destination = (id:string,provinceCode:Destination['provinceCode']):Destination=>({id,name:id,slug:id,provinceCode,publicationStatus:'published',contentVersion:1,updatedAt:'2026-09-08T00:00:00.000Z'});
+const provinces:Province[]=[{id:'p1',code:'NCD',name:'National Capital District',slug:'ncd'},{id:'p2',code:'ORO',name:'Oro',slug:'oro'}];
+const operator=(provinceCode:Operator['provinceCode']):Operator=>({id:`o-${provinceCode}`,legalName:`Operator ${provinceCode}`,provinceCode,status:'active',complianceStatus:'compliant',createdAt:'2026-09-08T00:00:00.000Z',updatedAt:'2026-09-08T00:00:00.000Z'});
+const destination=(id:string,provinceCode:Destination['provinceCode']):Destination=>({id,name:id,slug:id,provinceCode,publicationStatus:'published',contentVersion:1,updatedAt:'2026-09-08T00:00:00.000Z'});
 const content=(id:string,provinceCode:ContentItem['provinceCode']):ContentItem=>({id,type:'experience',title:id,slug:id,publicationStatus:'published',version:1,updatedAt:'2026-09-08T00:00:00.000Z',provinceCode});
 const service=()=>new IntelligenceService({operators:{list:async()=>({items:[operator('NCD'),operator('ORO')]})},destinations:{list:async()=>({items:[destination('d1','NCD'),destination('d2','ORO')]})},content:{list:async()=>({items:[content('c1','NCD'),content('c2','ORO')]})},provinces:{list:async()=>provinces}});
-describe('IntelligenceService',()=>{
- it('counts published experiences by province',async()=>{const result=await service().provincial();expect(result.find((p)=>p.provinceCode==='NCD')?.publishedExperiences).toBe(1);expect(result.find((p)=>p.provinceCode==='ORO')?.publishedExperiences).toBe(1);});
- it('does not fabricate visitor signals',async()=>{const result=await service().report();expect(result.snapshot.visitors).toBe(0);expect(result.provinces.every((p)=>p.visitorSignals===0)).toBe(true);});
-});
+describe('IntelligenceService',()=>{it('counts published experiences by province',async()=>{const result=await service().provincial();expect(result.find((p)=>p.provinceCode==='NCD')?.publishedExperiences).toBe(1);expect(result.find((p)=>p.provinceCode==='ORO')?.publishedExperiences).toBe(1);});it('does not fabricate visitor signals',async()=>{const result=await service().report();expect(result.snapshot.visitors).toBe(0);expect(result.provinces.every((p)=>p.visitorSignals===0)).toBe(true);});});
