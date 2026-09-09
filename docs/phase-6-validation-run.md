@@ -1,0 +1,1 @@
+Validate Phase 6 offline provincial and kiosk foundation.
