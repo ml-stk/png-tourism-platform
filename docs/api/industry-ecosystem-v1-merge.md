@@ -1,0 +1,1 @@
+Merge condition: CI success and no unresolved merge conflicts.
