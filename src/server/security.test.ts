@@ -17,16 +17,19 @@ describe('API security boundary', () => {
   });
 
   it('rate limits repeated requests', () => {
-    const req = { headers: { 'x-forwarded-for': '198.51.100.77' }, socket: {} } as any;
+    const req = { headers: { 'x-forwarded-for': `198.51.100.${Date.now() % 250}` }, socket: {} } as any;
     const res = { setHeader: vi.fn(), end: vi.fn(), statusCode: 200 } as any;
     const previousWindow = process.env.RATE_LIMIT_WINDOW_MS;
     const previousMax = process.env.RATE_LIMIT_MAX_REQUESTS;
     process.env.RATE_LIMIT_WINDOW_MS = '60000';
     process.env.RATE_LIMIT_MAX_REQUESTS = '1';
-    expect(enforceRateLimit(req, res)).toBe(true);
-    expect(enforceRateLimit(req, res)).toBe(false);
-    expect(res.statusCode).toBe(429);
-    process.env.RATE_LIMIT_WINDOW_MS = previousWindow;
-    process.env.RATE_LIMIT_MAX_REQUESTS = previousMax;
+    try {
+      expect(enforceRateLimit(req, res)).toBe(true);
+      expect(enforceRateLimit(req, res)).toBe(false);
+      expect(res.statusCode).toBe(429);
+    } finally {
+      if (previousWindow === undefined) delete process.env.RATE_LIMIT_WINDOW_MS; else process.env.RATE_LIMIT_WINDOW_MS = previousWindow;
+      if (previousMax === undefined) delete process.env.RATE_LIMIT_MAX_REQUESTS; else process.env.RATE_LIMIT_MAX_REQUESTS = previousMax;
+    }
   });
 });
