@@ -57,9 +57,8 @@ export class OfflineService {
     return { health: ageSeconds > staleAfterSeconds ? 'stale' : 'fresh', lastSuccessfulSyncAt, staleAfterSeconds };
   }
 
-  offlineState(lastSuccessfulSyncAt?: string, now = new Date(), staleAfterSeconds = DEFAULT_STALE_AFTER_SECONDS): SyncState {
-    const state = this.syncState(lastSuccessfulSyncAt, now, staleAfterSeconds);
-    return { ...state, health: state.health === 'never_synced' ? 'offline' : 'offline' };
+  offlineState(lastSuccessfulSyncAt?: string, _now = new Date(), staleAfterSeconds = DEFAULT_STALE_AFTER_SECONDS): SyncState {
+    return { health: 'offline', ...(lastSuccessfulSyncAt ? { lastSuccessfulSyncAt } : {}), staleAfterSeconds };
   }
 
   createQrHandoff(targetType: QrHandoff['targetType'], targetId: string, expiresAt?: Date): QrHandoff {
