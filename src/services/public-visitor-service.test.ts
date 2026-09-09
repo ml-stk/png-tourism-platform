@@ -36,7 +36,7 @@ describe('PublicVisitorService', () => {
 
   it('rejects unpublished destination detail', async () => {
     const svc = service({ destinations: { list: async () => ({ items: [] }), getById: async () => destination('draft') } });
-    await expect(svc.destination('d1')).rejects.toMatchObject<DomainError>({ code: 'NOT_FOUND' });
+    await expect(svc.destination('d1')).rejects.toMatchObject({ code: 'NOT_FOUND' });
   });
 
   it('returns a deliberately limited operator profile', async () => {
