@@ -1,5 +1,4 @@
 import type { ContentRepository, DestinationRepository, OperatorRepository, ProvinceRepository } from './contracts';
-import type { ComplianceStatus, OperatorStatus, PublicationStatus, ProvinceCode } from '../domain/types';
 import type { MetricPeriod, ProvincialInsight, TourismInsightReport, TourismKpiSnapshot } from '../domain/intelligence';
 
 export interface IntelligenceServiceDeps { operators: OperatorRepository; destinations: DestinationRepository; content: ContentRepository; provinces: ProvinceRepository; }
@@ -14,12 +13,12 @@ export class IntelligenceService {
       this.deps.content.list({ publicationStatus: 'published', limit: 1000 }),
       this.deps.provinces.list(),
     ]);
-    const activeOperators = operators.items.filter((x) => x.status === ('active' satisfies OperatorStatus));
-    const compliantOperators = activeOperators.filter((x) => x.complianceStatus === ('compliant' satisfies ComplianceStatus));
-    return { generatedAt: now.toISOString(), period, visitors: 0, publishedDestinations: destinations.items.length, activeOperators: activeOperators.length, compliantOperators: compliantOperators.length, publishedExperiences: content.items.filter((x) => x.type === 'experience' && x.publicationStatus === ('published' satisfies PublicationStatus)).length, provincesRepresented: provinces.filter((p) => destinations.items.some((d) => d.provinceCode === p.code)).length };
+    const activeOperators = operators.items.filter((x) => x.status === 'active');
+    const compliantOperators = activeOperators.filter((x) => x.complianceStatus === 'compliant');
+    return { generatedAt: now.toISOString(), period, visitors: 0, publishedDestinations: destinations.items.length, activeOperators: activeOperators.length, compliantOperators: compliantOperators.length, publishedExperiences: content.items.filter((x) => x.type === 'experience').length, provincesRepresented: provinces.filter((p) => destinations.items.some((d) => d.provinceCode === p.code)).length };
   }
 
-  async provincial(period: MetricPeriod = 'month', now = new Date()): Promise<ProvincialInsight[]> {
+  async provincial(_period: MetricPeriod = 'month', _now = new Date()): Promise<ProvincialInsight[]> {
     const provinces = await this.deps.provinces.list();
     const [operators, destinations, content] = await Promise.all([
       this.deps.operators.list({ limit: 1000 }),
@@ -28,8 +27,8 @@ export class IntelligenceService {
     ]);
     return provinces.map((province) => {
       const ops = operators.items.filter((x) => x.provinceCode === province.code);
-      const dests = destinations.items.filter((x) => x.provinceCode === province.code && x.publicationStatus === 'published');
-      return { provinceCode: province.code as ProvinceCode, publishedDestinations: dests.length, activeOperators: ops.filter((x) => x.status === 'active').length, compliantOperators: ops.filter((x) => x.status === 'active' && x.complianceStatus === 'compliant').length, publishedExperiences: content.items.filter((x) => x.type === 'experience' && x.publicationStatus === 'published').length, visitorSignals: 0 };
+      const dests = destinations.items.filter((x) => x.provinceCode === province.code);
+      return { provinceCode: province.code, publishedDestinations: dests.length, activeOperators: ops.filter((x) => x.status === 'active').length, compliantOperators: ops.filter((x) => x.status === 'active' && x.complianceStatus === 'compliant').length, publishedExperiences: content.items.filter((x) => x.type === 'experience').length, visitorSignals: 0 };
     });
   }
 
