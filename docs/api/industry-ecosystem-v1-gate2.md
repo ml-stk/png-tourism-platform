@@ -1,0 +1,1 @@
+Passing CI is required before opening the merge request.
