@@ -1,0 +1,1 @@
+Validation fix committed. The next branch pipeline is the authoritative verification.
