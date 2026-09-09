@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { ContentItem, Destination, Operator } from '../domain/types';
+import type { ContentItem, Destination } from '../domain/types';
 import { OfflineService } from './offline-service';
-import type { ContentRepository, DestinationRepository, OperatorRepository } from './contracts';
+import type { ContentRepository, DestinationRepository } from './contracts';
 
 const destination = (id: string, publicationStatus: Destination['publicationStatus'], provinceCode: Destination['provinceCode']): Destination => ({ id, name: `Destination ${id}`, slug: id, provinceCode, publicationStatus });
 const content = (id: string, publicationStatus: ContentItem['publicationStatus']): ContentItem => ({ id, type: 'experience', title: `Experience ${id}`, slug: id, publicationStatus, version: 1, updatedAt: '2026-01-01T00:00:00.000Z' });
@@ -52,6 +52,3 @@ describe('OfflineService', () => {
     expect(state.lastSuccessfulSyncAt).toBe('2026-09-08T00:00:00.000Z');
   });
 });
-
-// Keep the operator repository type imported only to make the public boundary explicit in this test module.
-void (null as unknown as OperatorRepository);
