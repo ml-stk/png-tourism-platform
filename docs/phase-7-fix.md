@@ -1,0 +1,1 @@
+Fixed the Phase 7 CI failure by aligning the ProvinceRepository test double with the repository contract: `list()` now returns `Province[]` rather than a paginated object. The intelligence service remains unchanged in behavior.
