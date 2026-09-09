@@ -1,0 +1,1 @@
+QA focus: published-only public views, active operator mutation checks, optimistic version conflicts, province filtering, lead source validation, and regulatory/public separation.
