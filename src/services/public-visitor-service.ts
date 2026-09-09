@@ -7,7 +7,8 @@ export interface PublicVisitorServiceDeps { destinations: DestinationRepository;
 export class PublicVisitorService {
   constructor(private readonly deps: PublicVisitorServiceDeps) {}
   async destinationsList(options?: { provinceCode?: string; cursor?: string; limit?: number }) {
-    return this.deps.destinations.list({ ...options, publicationStatus: 'published' });
+    const result = await this.deps.destinations.list({ ...options, publicationStatus: 'published' });
+    return { ...result, items: result.items.filter((item) => item.publicationStatus === 'published') };
   }
   async destination(id: string): Promise<Destination> {
     const item = await this.deps.destinations.getById(id);
@@ -15,7 +16,8 @@ export class PublicVisitorService {
     return item;
   }
   async contentList(options?: { type?: ContentItem['type']; cursor?: string; limit?: number }) {
-    return this.deps.content.list({ ...options, publicationStatus: 'published' });
+    const result = await this.deps.content.list({ ...options, publicationStatus: 'published' });
+    return { ...result, items: result.items.filter((item) => item.publicationStatus === 'published') };
   }
   async content(id: string): Promise<ContentItem> {
     const item = await this.deps.content.getById(id);
