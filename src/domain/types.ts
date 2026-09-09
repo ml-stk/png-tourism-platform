@@ -12,12 +12,7 @@ export type OperatorStatus = 'draft' | 'pending_review' | 'active' | 'suspended'
 export type PublicationStatus = 'draft' | 'review' | 'published' | 'archived';
 export type ComplianceStatus = 'unknown' | 'compliant' | 'conditional' | 'non_compliant';
 
-export interface Province {
-  id: ID;
-  code: ProvinceCode;
-  name: string;
-  slug: string;
-}
+export interface Province { id: ID; code: ProvinceCode; name: string; slug: string; }
 
 export interface Operator {
   id: ID;
@@ -39,6 +34,8 @@ export interface Destination {
   description?: string;
   latitude?: number;
   longitude?: number;
+  contentVersion: number;
+  updatedAt: string;
 }
 
 export interface ContentItem {
@@ -49,6 +46,11 @@ export interface ContentItem {
   publicationStatus: PublicationStatus;
   version: number;
   updatedAt: string;
+  provinceCode?: ProvinceCode;
+  summary?: string;
+  body?: string;
+  publishedAt?: string;
+  publishedBy?: ID;
 }
 
 export interface AuditEvent {
