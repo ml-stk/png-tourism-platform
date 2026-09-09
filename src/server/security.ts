@@ -40,3 +40,7 @@ export function requestBodyLimit(req: IncomingMessage, maxBytes = Number(process
     throw error;
   }
 }
+
+export function resetRateLimitBucketsForTests(): void {
+  buckets.clear();
+}
