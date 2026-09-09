@@ -1,0 +1,1 @@
+Industry ecosystem foundation: public industry profiles and experiences, visitor lead routing, active operator enforcement, optimistic mutations, governed publication, province-aware discovery, and documented API/persistence seams.

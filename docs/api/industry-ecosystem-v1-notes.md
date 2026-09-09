@@ -1,0 +1,1 @@
+The service boundary is intentionally provider-agnostic. PostgreSQL adapters and HTTP wiring should consume the contracts rather than couple the visitor UI to storage. This preserves the modular-monolith extraction path and keeps AI access governed through public source kinds.

@@ -1,0 +1,1 @@
+Industry Ecosystem v1 foundation is ready for CI: profile, experience, lead contracts; service governance; publication protection; active-operator enforcement; province-aware public discovery; documentation and tests.

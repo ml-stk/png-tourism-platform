@@ -1,0 +1,1 @@
+Handoff for API/persistence integration: consume `IndustryRepository` and `IndustryEcosystemService`; keep public reads published-only and province-scoped; keep operator mutations authenticated and active-state constrained; keep leads operator-scoped.
