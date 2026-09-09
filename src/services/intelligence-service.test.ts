@@ -8,10 +8,11 @@ const destinations = [{ id: 'd1', name: 'Port Moresby', slug: 'port-moresby', pr
 const content = [{ id: 'c1', type: 'experience' as const, title: 'Experience', slug: 'experience', publicationStatus: 'published' as const, version: 1, updatedAt: '2026-01-01T00:00:00.000Z' }];
 const listRepo = <T>(items: T[]) => ({ list: async () => ({ items, nextCursor: undefined }) });
 const provinceRepo = (): ProvinceRepository => ({ list: async () => provinces, getByCode: async (code) => provinces.find((province) => province.code === code) ?? null });
+const contentRepo = (items: typeof content): ContentRepository => ({ list: async () => ({ items, nextCursor: undefined }), getById: async (id) => items.find((item) => item.id === id) ?? null, save: async (item) => item, update: async (item) => item });
 
 describe('IntelligenceService', () => {
   it('builds governed national KPIs from published/active records', async () => {
-    const service = new IntelligenceService({ operators: listRepo(ops) as OperatorRepository, destinations: listRepo(destinations) as DestinationRepository, content: listRepo(content) as ContentRepository, provinces: provinceRepo() });
+    const service = new IntelligenceService({ operators: listRepo(ops) as OperatorRepository, destinations: listRepo(destinations) as DestinationRepository, content: contentRepo(content), provinces: provinceRepo() });
     const snapshot = await service.snapshot('month', new Date('2026-09-01T00:00:00.000Z'));
     expect(snapshot.activeOperators).toBe(1);
     expect(snapshot.compliantOperators).toBe(1);
@@ -22,7 +23,7 @@ describe('IntelligenceService', () => {
   });
 
   it('keeps regulatory operator state out of visitor-facing metrics', async () => {
-    const service = new IntelligenceService({ operators: listRepo([{ ...ops[0], status: 'suspended' as const, complianceStatus: 'non_compliant' as const }]) as OperatorRepository, destinations: listRepo(destinations) as DestinationRepository, content: listRepo([]) as ContentRepository, provinces: provinceRepo() });
+    const service = new IntelligenceService({ operators: listRepo([{ ...ops[0], status: 'suspended' as const, complianceStatus: 'non_compliant' as const }]) as OperatorRepository, destinations: listRepo(destinations) as DestinationRepository, content: contentRepo([]), provinces: provinceRepo() });
     const report = await service.report();
     expect(report.snapshot.activeOperators).toBe(0);
     expect(report.snapshot.compliantOperators).toBe(0);
