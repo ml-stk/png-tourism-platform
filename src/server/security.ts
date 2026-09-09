@@ -2,8 +2,6 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 
 interface Bucket { count: number; resetAt: number; }
 const buckets = new Map<string, Bucket>();
-const WINDOW_MS = Number(process.env.RATE_LIMIT_WINDOW_MS || 60_000);
-const MAX_REQUESTS = Number(process.env.RATE_LIMIT_MAX_REQUESTS || 120);
 
 export function applySecurityHeaders(res: ServerResponse): void {
   res.setHeader('x-content-type-options', 'nosniff');
@@ -15,15 +13,17 @@ export function applySecurityHeaders(res: ServerResponse): void {
 }
 
 export function enforceRateLimit(req: IncomingMessage, res: ServerResponse): boolean {
+  const windowMs = Number(process.env.RATE_LIMIT_WINDOW_MS || 60_000);
+  const maxRequests = Number(process.env.RATE_LIMIT_MAX_REQUESTS || 120);
   const key = req.headers['x-forwarded-for']?.toString().split(',')[0].trim() || req.socket.remoteAddress || 'unknown';
   const now = Date.now();
   const current = buckets.get(key);
-  if (!current || current.resetAt <= now) buckets.set(key, { count: 1, resetAt: now + WINDOW_MS });
+  if (!current || current.resetAt <= now) buckets.set(key, { count: 1, resetAt: now + windowMs });
   else current.count += 1;
   const bucket = buckets.get(key)!;
-  res.setHeader('x-ratelimit-limit', String(MAX_REQUESTS));
-  res.setHeader('x-ratelimit-remaining', String(Math.max(0, MAX_REQUESTS - bucket.count)));
-  if (bucket.count > MAX_REQUESTS) {
+  res.setHeader('x-ratelimit-limit', String(maxRequests));
+  res.setHeader('x-ratelimit-remaining', String(Math.max(0, maxRequests - bucket.count)));
+  if (bucket.count > maxRequests) {
     res.setHeader('retry-after', String(Math.ceil((bucket.resetAt - now) / 1000)));
     res.statusCode = 429;
     res.end(JSON.stringify({ error: { code: 'RATE_LIMITED', message: 'Too many requests' } }));
