@@ -14,7 +14,14 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const industryRepository = new PostgresIndustryRepository(pool);
 const operatorRepository = new PostgresOperatorRepository(pool);
 const industryService = new IndustryEcosystemService({
-  ...industryRepository,
+  getProfile: industryRepository.getProfile.bind(industryRepository),
+  saveProfile: industryRepository.saveProfile.bind(industryRepository),
+  listPublishedProfiles: industryRepository.listPublishedProfiles.bind(industryRepository),
+  getExperience: industryRepository.getExperience.bind(industryRepository),
+  saveExperience: industryRepository.saveExperience.bind(industryRepository),
+  listPublishedExperiences: industryRepository.listPublishedExperiences.bind(industryRepository),
+  createLead: industryRepository.createLead.bind(industryRepository),
+  listLeads: industryRepository.listLeads.bind(industryRepository),
   isOperatorActive: async (operatorId) => (await operatorRepository.getById(operatorId))?.status === 'active',
 });
 
