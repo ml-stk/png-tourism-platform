@@ -1,0 +1,1 @@
+Validation covers TypeScript compilation and the repository test suite, plus the explicit publication and operator-scope governance contracts in the industry service.
