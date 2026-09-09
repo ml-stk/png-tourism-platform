@@ -1,4 +1,5 @@
 import type { AuditEvent, Destination, Operator, Province } from '../domain/types';
+import type { AiAuditEvent } from '../domain/ai';
 import type {
   AuditWriter,
   DestinationRepository as ServiceDestinationRepository,
@@ -7,7 +8,6 @@ import type {
 } from '../services/contracts';
 import type { ID } from '../domain/types';
 
-/** Persistence contracts intentionally preserve the service-layer boundary. */
 export type OperatorRepository = ServiceOperatorRepository;
 export type DestinationRepository = ServiceDestinationRepository;
 export type ProvinceRepository = ServiceProvinceRepository;
@@ -16,14 +16,18 @@ export interface AuditRepository extends AuditWriter {
   listForTarget(targetType: string, targetId: ID): Promise<AuditEvent[]>;
 }
 
+export interface AiAuditRepository {
+  record(event: AiAuditEvent & { requestId?: string }): Promise<void>;
+}
+
 export interface PlatformRepositories {
   operators: OperatorRepository;
   destinations: DestinationRepository;
   provinces: ProvinceRepository;
   audit: AuditRepository;
+  aiAudit?: AiAuditRepository;
 }
 
-/** Compile-time helper for adapters that persist domain entities. */
 export type PersistedEntities = {
   operator: Operator;
   destination: Destination;
