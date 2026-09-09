@@ -1,0 +1,1 @@
+Phase 6 implementation is ready for CI validation: offline channel contracts, manifest service, sync state, QR handoff, PWA shell, tests and architecture documentation.
