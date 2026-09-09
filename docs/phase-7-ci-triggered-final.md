@@ -1,0 +1,1 @@
+Phase 7 CI should validate the corrected test contract.
