@@ -1,72 +1,31 @@
 import { Pool } from 'pg';
-import type { AuditEvent, Destination, Operator, OperatorStatus, Province, ProvinceCode } from '../domain/types';
-import type { AuditWriter, DestinationRepository, OperatorRepository, ProvinceRepository } from '../services/contracts';
-
+import type { AuditEvent, ContentItem, Destination, Operator, OperatorStatus, Province, ProvinceCode, PublicationStatus } from '../domain/types';
+import type { AuditWriter, ContentRepository, DestinationRepository, OperatorRepository, ProvinceRepository } from '../services/contracts';
 const asProvinceCode = (value: string): ProvinceCode => value as ProvinceCode;
-
 export class PostgresOperatorRepository implements OperatorRepository {
-  constructor(private readonly pool: Pool) {}
-  async list(options: { provinceCode?: string; status?: string; cursor?: string; limit?: number } = {}) {
-    const limit = Math.min(Math.max(options.limit ?? 50, 1), 100);
-    const values: unknown[] = [];
-    const where: string[] = [];
-    if (options.provinceCode) { values.push(options.provinceCode); where.push(`province_code = $${values.length}`); }
-    if (options.status) { values.push(options.status); where.push(`status = $${values.length}`); }
-    if (options.cursor) { values.push(options.cursor); where.push(`id > $${values.length}::uuid`); }
-    values.push(limit + 1);
-    const result = await this.pool.query(`select id, legal_name, trading_name, province_code, status, compliance_status, created_at, updated_at from operators ${where.length ? `where ${where.join(' and ')}` : ''} order by id limit $${values.length}`, values);
-    const rows = result.rows.slice(0, limit);
-    return { items: rows.map(toOperator), nextCursor: result.rows.length > limit ? rows[rows.length - 1].id : undefined };
-  }
-  async getById(id: string) {
-    const result = await this.pool.query('select id, legal_name, trading_name, province_code, status, compliance_status, created_at, updated_at from operators where id = $1', [id]);
-    return result.rows[0] ? toOperator(result.rows[0]) : null;
-  }
-  async save(operator: Operator) {
-    const result = await this.pool.query(`insert into operators (id, legal_name, trading_name, province_code, status, compliance_status, created_at, updated_at) values ($1,$2,$3,$4,$5,$6,$7,$8) returning id, legal_name, trading_name, province_code, status, compliance_status, created_at, updated_at`, [operator.id, operator.legalName, operator.tradingName ?? null, operator.provinceCode, operator.status, operator.complianceStatus, operator.createdAt, operator.updatedAt]);
-    return toOperator(result.rows[0]);
-  }
-  async update(operator: Operator, expectedStatus?: OperatorStatus) {
-    const values: unknown[] = [operator.legalName, operator.tradingName ?? null, operator.provinceCode, operator.status, operator.complianceStatus, operator.updatedAt, operator.id];
-    if (expectedStatus) values.push(expectedStatus);
-    const result = await this.pool.query(`update operators set legal_name=$1, trading_name=$2, province_code=$3, status=$4, compliance_status=$5, updated_at=$6 where id=$7${expectedStatus ? ' and status = $8' : ''} returning id, legal_name, trading_name, province_code, status, compliance_status, created_at, updated_at`, values);
-    return result.rows[0] ? toOperator(result.rows[0]) : null;
-  }
+ constructor(private readonly pool: Pool) {}
+ async list(options: any = {}) { const limit=Math.min(Math.max(options.limit??50,1),100), values:any[]=[], where:string[]=[]; if(options.provinceCode){values.push(options.provinceCode);where.push(`province_code=$${values.length}`)} if(options.status){values.push(options.status);where.push(`status=$${values.length}`)} if(options.cursor){values.push(options.cursor);where.push(`id>$${values.length}::uuid`)} values.push(limit+1); const r=await this.pool.query(`select id,legal_name,trading_name,province_code,status,compliance_status,created_at,updated_at from operators ${where.length?`where ${where.join(' and ')}`:''} order by id limit $${values.length}`,values); const rows=r.rows.slice(0,limit); return {items:rows.map(toOperator),nextCursor:r.rows.length>limit?rows[rows.length-1].id:undefined}; }
+ async getById(id:string){const r=await this.pool.query('select id,legal_name,trading_name,province_code,status,compliance_status,created_at,updated_at from operators where id=$1',[id]);return r.rows[0]?toOperator(r.rows[0]):null;}
+ async save(o:Operator){const r=await this.pool.query(`insert into operators(id,legal_name,trading_name,province_code,status,compliance_status,created_at,updated_at) values($1,$2,$3,$4,$5,$6,$7,$8) returning id,legal_name,trading_name,province_code,status,compliance_status,created_at,updated_at`,[o.id,o.legalName,o.tradingName??null,o.provinceCode,o.status,o.complianceStatus,o.createdAt,o.updatedAt]);return toOperator(r.rows[0]);}
+ async update(o:Operator,expectedStatus?:OperatorStatus){const v:any[]=[o.legalName,o.tradingName??null,o.provinceCode,o.status,o.complianceStatus,o.updatedAt,o.id];if(expectedStatus)v.push(expectedStatus);const r=await this.pool.query(`update operators set legal_name=$1,trading_name=$2,province_code=$3,status=$4,compliance_status=$5,updated_at=$6 where id=$7${expectedStatus?' and status=$8':''} returning id,legal_name,trading_name,province_code,status,compliance_status,created_at,updated_at`,v);return r.rows[0]?toOperator(r.rows[0]):null;}
 }
-
 export class PostgresDestinationRepository implements DestinationRepository {
-  constructor(private readonly pool: Pool) {}
-  async list(options: { provinceCode?: string; cursor?: string; limit?: number } = {}) {
-    const limit = Math.min(Math.max(options.limit ?? 50, 1), 100);
-    const values: unknown[] = [];
-    const where: string[] = [];
-    if (options.provinceCode) { values.push(options.provinceCode); where.push(`province_code = $${values.length}`); }
-    if (options.cursor) { values.push(options.cursor); where.push(`id > $${values.length}::uuid`); }
-    values.push(limit + 1);
-    const result = await this.pool.query(`select id,name,slug,province_code,publication_status,description,latitude,longitude from destinations ${where.length ? `where ${where.join(' and ')}` : ''} order by id limit $${values.length}`, values);
-    const rows = result.rows.slice(0, limit);
-    return { items: rows.map(toDestination), nextCursor: result.rows.length > limit ? rows[rows.length - 1].id : undefined };
-  }
-  async getById(id: string) { const result = await this.pool.query('select id,name,slug,province_code,publication_status,description,latitude,longitude from destinations where id=$1',[id]); return result.rows[0] ? toDestination(result.rows[0]) : null; }
+ constructor(private readonly pool:Pool) {}
+ async list(options:any={}){const limit=Math.min(Math.max(options.limit??50,1),100),v:any[]=[],w:string[]=[];if(options.provinceCode){v.push(options.provinceCode);w.push(`province_code=$${v.length}`)}if(options.cursor){v.push(options.cursor);w.push(`id>$${v.length}::uuid`)}v.push(limit+1);const r=await this.pool.query(`select id,name,slug,province_code,publication_status,description,latitude,longitude from destinations ${w.length?`where ${w.join(' and ')}`:''} order by id limit $${v.length}`,v);const rows=r.rows.slice(0,limit);return{items:rows.map(toDestination),nextCursor:r.rows.length>limit?rows[rows.length-1].id:undefined};}
+ async getById(id:string){const r=await this.pool.query('select id,name,slug,province_code,publication_status,description,latitude,longitude from destinations where id=$1',[id]);return r.rows[0]?toDestination(r.rows[0]):null;}
+ async save(d:Destination){const r=await this.pool.query(`insert into destinations(id,name,slug,province_code,publication_status,description,latitude,longitude) values($1,$2,$3,$4,$5,$6,$7,$8) returning id,name,slug,province_code,publication_status,description,latitude,longitude`,[d.id,d.name,d.slug,d.provinceCode,d.publicationStatus,d.description??null,d.latitude??null,d.longitude??null]);return toDestination(r.rows[0]);}
+ async update(d:Destination){const r=await this.pool.query(`update destinations set name=$1,slug=$2,province_code=$3,publication_status=$4,description=$5,latitude=$6,longitude=$7,updated_at=now() where id=$8 returning id,name,slug,province_code,publication_status,description,latitude,longitude`,[d.name,d.slug,d.provinceCode,d.publicationStatus,d.description??null,d.latitude??null,d.longitude??null,d.id]);return r.rows[0]?toDestination(r.rows[0]):null;}
 }
-
-export class PostgresProvinceRepository implements ProvinceRepository {
-  constructor(private readonly pool: Pool) {}
-  async list() { const result = await this.pool.query('select id,code,name,slug from provinces order by name'); return result.rows.map(toProvince); }
-  async getByCode(code: string) { const result = await this.pool.query('select id,code,name,slug from provinces where code=$1',[code]); return result.rows[0] ? toProvince(result.rows[0]) : null; }
+export class PostgresContentRepository implements ContentRepository {
+ constructor(private readonly pool:Pool) {}
+ async list(options:any={}){const limit=Math.min(Math.max(options.limit??50,1),100),v:any[]=[],w:string[]=[];if(options.type){v.push(options.type);w.push(`type=$${v.length}`)}if(options.publicationStatus){v.push(options.publicationStatus);w.push(`publication_status=$${v.length}`)}if(options.cursor){v.push(options.cursor);w.push(`id>$${v.length}::uuid`)}v.push(limit+1);const r=await this.pool.query(`select id,type,title,slug,publication_status,version,updated_at,created_at from content_items ${w.length?`where ${w.join(' and ')}`:''} order by id limit $${v.length}`,v);const rows=r.rows.slice(0,limit);return{items:rows.map(toContent),nextCursor:r.rows.length>limit?rows[rows.length-1].id:undefined};}
+ async getById(id:string){const r=await this.pool.query('select id,type,title,slug,publication_status,version,updated_at,created_at from content_items where id=$1',[id]);return r.rows[0]?toContent(r.rows[0]):null;}
+ async save(i:ContentItem){const r=await this.pool.query(`insert into content_items(id,type,title,slug,publication_status,version,updated_at,created_at) values($1,$2,$3,$4,$5,$6,$7,$8) returning id,type,title,slug,publication_status,version,updated_at,created_at`,[i.id,i.type,i.title,i.slug,i.publicationStatus,i.version,i.updatedAt,new Date().toISOString()]);return toContent(r.rows[0]);}
+ async update(i:ContentItem,expectedVersion?:number){const v:any[]=[i.title,i.slug,i.publicationStatus,i.version,i.updatedAt,i.id];if(expectedVersion)v.push(expectedVersion);const r=await this.pool.query(`update content_items set title=$1,slug=$2,publication_status=$3,version=$4,updated_at=$5 where id=$6${expectedVersion?' and version=$7':''} returning id,type,title,slug,publication_status,version,updated_at,created_at`,v);return r.rows[0]?toContent(r.rows[0]):null;}
 }
-
-export class PostgresAuditRepository implements AuditWriter {
-  constructor(private readonly pool: Pool) {}
-  async record(event: { actorId?: string; action: string; targetType: string; targetId: string; outcome: 'success' | 'failure'; requestId?: string; metadata?: Record<string, unknown> }) {
-    await this.pool.query('insert into audit_events (actor_id,action,target_type,target_id,outcome,request_id,metadata) values ($1,$2,$3,$4,$5,$6,$7)', [event.actorId ?? null,event.action,event.targetType,event.targetId,event.outcome,event.requestId ?? null,event.metadata ? JSON.stringify(event.metadata) : null]);
-  }
-  async listForTarget(targetType: string, targetId: string): Promise<AuditEvent[]> {
-    const result = await this.pool.query('select id,actor_id,action,target_type,target_id,outcome,occurred_at,request_id from audit_events where target_type=$1 and target_id=$2 order by occurred_at desc',[targetType,targetId]);
-    return result.rows.map((row) => ({ id: row.id, actorId: row.actor_id ?? undefined, action: row.action, targetType: row.target_type, targetId: row.target_id, outcome: row.outcome, occurredAt: new Date(row.occurred_at).toISOString(), requestId: row.request_id ?? undefined }));
-  }
-}
-
-function toOperator(row: any): Operator { return { id: row.id, legalName: row.legal_name, tradingName: row.trading_name ?? undefined, provinceCode: asProvinceCode(row.province_code), status: row.status, complianceStatus: row.compliance_status, createdAt: new Date(row.created_at).toISOString(), updatedAt: new Date(row.updated_at).toISOString() }; }
-function toDestination(row: any): Destination { return { id: row.id, name: row.name, slug: row.slug, provinceCode: asProvinceCode(row.province_code), publicationStatus: row.publication_status, description: row.description ?? undefined, latitude: row.latitude ?? undefined, longitude: row.longitude ?? undefined }; }
-function toProvince(row: any): Province { return { id: row.id, code: asProvinceCode(row.code), name: row.name, slug: row.slug }; }
+export class PostgresProvinceRepository implements ProvinceRepository {constructor(private readonly pool:Pool){} async list(){const r=await this.pool.query('select id,code,name,slug from provinces order by name');return r.rows.map(toProvince)} async getByCode(c:string){const r=await this.pool.query('select id,code,name,slug from provinces where code=$1',[c]);return r.rows[0]?toProvince(r.rows[0]):null;}}
+export class PostgresAuditRepository implements AuditWriter {constructor(private readonly pool:Pool){} async record(e:any){await this.pool.query('insert into audit_events(actor_id,action,target_type,target_id,outcome,request_id,metadata) values($1,$2,$3,$4,$5,$6,$7)',[e.actorId??null,e.action,e.targetType,e.targetId,e.outcome,e.requestId??null,e.metadata?JSON.stringify(e.metadata):null]);} async listForTarget(t:string,id:string):Promise<AuditEvent[]>{const r=await this.pool.query('select id,actor_id,action,target_type,target_id,outcome,occurred_at,request_id from audit_events where target_type=$1 and target_id=$2 order by occurred_at desc',[t,id]);return r.rows.map(x=>({id:x.id,actorId:x.actor_id??undefined,action:x.action,targetType:x.target_type,targetId:x.target_id,outcome:x.outcome,occurredAt:new Date(x.occurred_at).toISOString(),requestId:x.request_id??undefined}));}}
+function toOperator(r:any):Operator{return{id:r.id,legalName:r.legal_name,tradingName:r.trading_name??undefined,provinceCode:asProvinceCode(r.province_code),status:r.status,complianceStatus:r.compliance_status,createdAt:new Date(r.created_at).toISOString(),updatedAt:new Date(r.updated_at).toISOString()};}
+function toDestination(r:any):Destination{return{id:r.id,name:r.name,slug:r.slug,provinceCode:asProvinceCode(r.province_code),publicationStatus:r.publication_status,description:r.description??undefined,latitude:r.latitude??undefined,longitude:r.longitude??undefined};}
+function toContent(r:any):ContentItem{return{id:r.id,type:r.type,title:r.title,slug:r.slug,publicationStatus:r.publication_status,version:r.version,updatedAt:new Date(r.updated_at).toISOString()};}
+function toProvince(r:any):Province{return{id:r.id,code:asProvinceCode(r.code),name:r.name,slug:r.slug};}
