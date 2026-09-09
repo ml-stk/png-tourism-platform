@@ -1,0 +1,1 @@
+CI validation marker for Phase 6 offline provincial and kiosk foundation.
