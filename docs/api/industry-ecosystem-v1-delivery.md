@@ -1,0 +1,1 @@
+This commit establishes the first industry ecosystem domain/service slice. API and PostgreSQL integration remain deliberately separated for the next increment.

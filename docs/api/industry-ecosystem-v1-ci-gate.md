@@ -1,0 +1,1 @@
+Industry ecosystem foundation requires the standard repository CI suite to pass before merge.

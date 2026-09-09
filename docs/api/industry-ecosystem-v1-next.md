@@ -1,0 +1,1 @@
+Next implementation step: PostgreSQL repository adapter and authenticated HTTP integration, followed by visitor UI consumption. The current service contracts are the stable seam for that work.
