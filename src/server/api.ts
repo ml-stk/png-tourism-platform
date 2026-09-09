@@ -2,94 +2,26 @@ import { randomUUID } from 'node:crypto';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { Pool } from 'pg';
 import { OperatorService } from '../services/operator-service';
+import { DestinationService, ContentService } from '../services/content-service';
 import { requirePermission, requireProvinceAccess, requireOperatorAccess } from '../auth/authorization';
-import type { AuthorizationContext, AuthenticatedUser } from '../auth/types';
-import type { ComplianceStatus, ProvinceCode } from '../domain/types';
-import { PostgresAuditRepository, PostgresOperatorRepository, PostgresProvinceRepository } from '../persistence/postgres-repositories';
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-const repositories = { operators: new PostgresOperatorRepository(pool), provinces: new PostgresProvinceRepository(pool), audit: new PostgresAuditRepository(pool) };
-const operatorService = new OperatorService(repositories.operators, repositories.audit);
-
-export function createApiServer() {
-  return createServer(async (req, res) => {
-    const requestId = req.headers['x-request-id']?.toString() || randomUUID();
-    res.setHeader('x-request-id', requestId);
-    res.setHeader('content-type', 'application/json; charset=utf-8');
-    try {
-      const context = authenticate(req, requestId);
-      const url = new URL(req.url || '/', 'http://localhost');
-      if (req.method === 'GET' && url.pathname === '/api/v1/operators') {
-        requirePermission(context, 'operator:read');
-        const provinceCode = url.searchParams.get('province') || undefined;
-        if (provinceCode) requireProvinceAccess(context, provinceCode as ProvinceCode);
-        return send(res, 200, { data: await repositories.operators.list({ provinceCode, status: url.searchParams.get('status') || undefined, cursor: url.searchParams.get('cursor') || undefined }), requestId });
-      }
-      if (url.pathname.startsWith('/api/v1/operators/')) {
-        const remainder = url.pathname.slice('/api/v1/operators/'.length);
-        const [id, action] = remainder.split('/');
-        if (!id || remainder.split('/').length > 2) return send(res, 404, { error: { code: 'NOT_FOUND', message: 'Operator route not found' }, requestId });
-        if (req.method === 'GET' && !action) {
-          requirePermission(context, 'operator:read');
-          requireOperatorAccess(context, id);
-          return send(res, 200, { data: await operatorService.get(id), requestId });
-        }
-        if (req.method === 'POST' && action) {
-          const operator = await operatorService.get(id);
-          requireProvinceAccess(context, operator.provinceCode);
-          const body = await readJson(req);
-          if (action === 'approve') {
-            requirePermission(context, 'operator:approve');
-            return send(res, 200, { data: await operatorService.approve(id, context.user.id, requestId), requestId });
-          }
-          if (action === 'reject') {
-            requirePermission(context, 'operator:approve');
-            return send(res, 200, { data: await operatorService.reject(id, requiredString(body.reason, 'reason'), context.user.id, requestId), requestId });
-          }
-          if (action === 'compliance') {
-            requirePermission(context, 'operator:manage_compliance');
-            const status = body.status;
-            if (typeof status !== 'string') return send(res, 400, { error: { code: 'VALIDATION_ERROR', message: 'status is required' }, requestId });
-            return send(res, 200, { data: await operatorService.updateCompliance(id, status as ComplianceStatus, typeof body.note === 'string' ? body.note : undefined, context.user.id, requestId), requestId });
-          }
-          if (action === 'suspend') {
-            requirePermission(context, 'operator:manage_status');
-            return send(res, 200, { data: await operatorService.suspend(id, requiredString(body.reason, 'reason'), context.user.id, requestId), requestId });
-          }
-          if (action === 'close') {
-            requirePermission(context, 'operator:manage_status');
-            return send(res, 200, { data: await operatorService.close(id, requiredString(body.reason, 'reason'), context.user.id, requestId), requestId });
-          }
-        }
-      }
-      if (req.method === 'POST' && url.pathname === '/api/v1/operators') {
-        requirePermission(context, 'operator:register');
-        const body = await readJson(req);
-        if (typeof body.legalName !== 'string' || typeof body.provinceCode !== 'string') return send(res, 400, { error: { code: 'VALIDATION_ERROR', message: 'legalName and provinceCode are required' }, requestId });
-        requireProvinceAccess(context, body.provinceCode as ProvinceCode);
-        const data = await operatorService.register({ legalName: body.legalName, tradingName: typeof body.tradingName === 'string' ? body.tradingName : undefined, provinceCode: body.provinceCode as ProvinceCode, actorId: context.user.id, requestId });
-        return send(res, 201, { data, requestId });
-      }
-      if (req.method === 'GET' && url.pathname === '/api/v1/provinces') return send(res, 200, { data: await repositories.provinces.list(), requestId });
-      return send(res, 404, { error: { code: 'NOT_FOUND', message: 'Route not found' }, requestId });
-    } catch (error: any) {
-      const status = error?.code === 'UNAUTHORIZED' ? 401 : error?.code === 'FORBIDDEN' ? 403 : error?.code === 'NOT_FOUND' ? 404 : error?.code === 'VALIDATION_ERROR' ? 400 : error?.code === 'CONFLICT' ? 409 : 500;
-      return send(res, status, { error: { code: error?.code || 'INTERNAL_ERROR', message: status === 500 ? 'Internal server error' : error.message }, requestId });
-    }
-  });
+import type { ComplianceStatus, ProvinceCode, PublicationStatus, ContentItem } from '../domain/types';
+import { PostgresAuditRepository, PostgresContentRepository, PostgresDestinationRepository, PostgresOperatorRepository, PostgresProvinceRepository } from '../persistence/postgres-repositories';
+const pool=new Pool({connectionString:process.env.DATABASE_URL});
+const repositories={operators:new PostgresOperatorRepository(pool),destinations:new PostgresDestinationRepository(pool),content:new PostgresContentRepository(pool),provinces:new PostgresProvinceRepository(pool),audit:new PostgresAuditRepository(pool)};
+const operatorService=new OperatorService(repositories.operators,repositories.audit); const destinationService=new DestinationService(repositories.destinations,repositories.audit); const contentService=new ContentService(repositories.content,repositories.audit);
+export function createApiServer(){return createServer(async(req,res)=>{const requestId=req.headers['x-request-id']?.toString()||randomUUID();res.setHeader('x-request-id',requestId);res.setHeader('content-type','application/json; charset=utf-8');try{const context=authenticate(req,requestId);const url=new URL(req.url||'/','http://localhost');
+if(req.method==='GET'&&url.pathname==='/api/v1/operators'){requirePermission(context,'operator:read');const provinceCode=url.searchParams.get('province')||undefined;if(provinceCode)requireProvinceAccess(context,provinceCode as ProvinceCode);return send(res,200,{data:await repositories.operators.list({provinceCode,status:url.searchParams.get('status')||undefined,cursor:url.searchParams.get('cursor')||undefined}),requestId});}
+if(req.method==='POST'&&url.pathname==='/api/v1/operators'){requirePermission(context,'operator:register');const b=await readJson(req);if(typeof b.legalName!=='string'||typeof b.provinceCode!=='string')return send(res,400,{error:{code:'VALIDATION_ERROR',message:'legalName and provinceCode are required'},requestId});requireProvinceAccess(context,b.provinceCode as ProvinceCode);const data=await operatorService.register({legalName:b.legalName,tradingName:typeof b.tradingName==='string'?b.tradingName:undefined,provinceCode:b.provinceCode as ProvinceCode,actorId:context.user.id,requestId});return send(res,201,{data,requestId});}
+if(url.pathname.startsWith('/api/v1/operators/')){const [id,action]=url.pathname.slice('/api/v1/operators/'.length).split('/');if(!id||url.pathname.split('/').length>5)return send(res,404,{error:{code:'NOT_FOUND',message:'Operator route not found'},requestId});if(req.method==='GET'&&!action){requirePermission(context,'operator:read');requireOperatorAccess(context,id);return send(res,200,{data:await operatorService.get(id),requestId});}if(req.method==='POST'&&action){const o=await operatorService.get(id);requireProvinceAccess(context,o.provinceCode);const b=await readJson(req);if(action==='approve'){requirePermission(context,'operator:approve');return send(res,200,{data:await operatorService.approve(id,context.user.id,requestId),requestId});}if(action==='reject'){requirePermission(context,'operator:approve');return send(res,200,{data:await operatorService.reject(id,requiredString(b.reason,'reason'),context.user.id,requestId),requestId});}if(action==='compliance'){requirePermission(context,'operator:manage_compliance');if(typeof b.status!=='string')throwValidation('status is required');return send(res,200,{data:await operatorService.updateCompliance(id,b.status as ComplianceStatus,typeof b.note==='string'?b.note:undefined,context.user.id,requestId),requestId});}if(action==='suspend'){requirePermission(context,'operator:manage_status');return send(res,200,{data:await operatorService.suspend(id,requiredString(b.reason,'reason'),context.user.id,requestId),requestId});}if(action==='close'){requirePermission(context,'operator:manage_status');return send(res,200,{data:await operatorService.close(id,requiredString(b.reason,'reason'),context.user.id,requestId),requestId});}}
 }
-
-function authenticate(req: IncomingMessage, requestId: string): AuthorizationContext {
-  const subject = req.headers.authorization?.replace(/^Bearer\s+/i, '') || (process.env.NODE_ENV !== 'production' ? process.env.DEV_IDENTITY_SUBJECT : undefined);
-  if (!subject) { const error: any = new Error('Authentication required'); error.code = 'UNAUTHORIZED'; throw error; }
-  const roles = (process.env.DEV_IDENTITY_ROLES || 'platform_admin').split(',').map((role) => role.trim()).filter(Boolean);
-  const user: AuthenticatedUser = { id: process.env.DEV_IDENTITY_USER_ID || '00000000-0000-0000-0000-000000000001', externalSubject: subject, email: process.env.DEV_IDENTITY_EMAIL || 'developer@pngtourism.local', displayName: 'Development User', roles: roles as AuthenticatedUser['roles'] };
-  return { user, requestId };
-}
-
-function requiredString(value: unknown, field: string): string {
-  if (typeof value !== 'string' || !value.trim()) { const error: any = new Error(`${field} is required`); error.code = 'VALIDATION_ERROR'; throw error; }
-  return value;
-}
-async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> { const chunks: Buffer[] = []; for await (const chunk of req) chunks.push(Buffer.from(chunk)); try { const parsed: unknown = JSON.parse(Buffer.concat(chunks).toString('utf8')); if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error(); return parsed as Record<string, unknown>; } catch { const error: any = new Error('Invalid JSON body'); error.code = 'VALIDATION_ERROR'; throw error; } }
-function send(res: ServerResponse, status: number, body: unknown) { res.statusCode = status; res.end(JSON.stringify(body)); }
+if(req.method==='GET'&&url.pathname==='/api/v1/provinces')return send(res,200,{data:await repositories.provinces.list(),requestId});
+if(req.method==='GET'&&url.pathname==='/api/v1/destinations'){requirePermission(context,'content:read');const p=url.searchParams.get('province')||undefined;if(p)requireProvinceAccess(context,p as ProvinceCode);return send(res,200,{data:await destinationService.list({provinceCode:p,cursor:url.searchParams.get('cursor')||undefined}),requestId});}
+if(req.method==='GET'&&url.pathname.startsWith('/api/v1/destinations/')){requirePermission(context,'content:read');const id=url.pathname.split('/').pop()!;const d=await destinationService.get(id);requireProvinceAccess(context,d.provinceCode);return send(res,200,{data:d,requestId});}
+if(req.method==='POST'&&url.pathname==='/api/v1/destinations'){requirePermission(context,'content:write');const b=await readJson(req);if(typeof b.name!=='string'||typeof b.slug!=='string'||typeof b.provinceCode!=='string')throwValidation('name, slug and provinceCode are required');requireProvinceAccess(context,b.provinceCode as ProvinceCode);const d=await destinationService.create({name:b.name,slug:b.slug,provinceCode:b.provinceCode as ProvinceCode,description:typeof b.description==='string'?b.description:undefined,latitude:typeof b.latitude==='number'?b.latitude:undefined,longitude:typeof b.longitude==='number'?b.longitude:undefined,actorId:context.user.id,requestId});return send(res,201,{data:d,requestId});}
+if(req.method==='GET'&&url.pathname==='/api/v1/content'){requirePermission(context,'content:read');return send(res,200,{data:await contentService.list({type:(url.searchParams.get('type') as ContentItem['type'])||undefined,publicationStatus:(url.searchParams.get('status') as PublicationStatus)||undefined,cursor:url.searchParams.get('cursor')||undefined}),requestId});}
+if(req.method==='GET'&&url.pathname.startsWith('/api/v1/content/')){requirePermission(context,'content:read');return send(res,200,{data:await contentService.get(url.pathname.split('/').pop()!),requestId});}
+if(req.method==='POST'&&url.pathname==='/api/v1/content'){requirePermission(context,'content:write');const b=await readJson(req);if(typeof b.type!=='string'||typeof b.title!=='string'||typeof b.slug!=='string')throwValidation('type, title and slug are required');if(!['destination','attraction','experience','event','operator','campaign'].includes(b.type))throwValidation('Invalid content type');const item=await contentService.create({type:b.type as ContentItem['type'],title:b.title,slug:b.slug,actorId:context.user.id,requestId});return send(res,201,{data:item,requestId});}
+if(req.method==='POST'&&url.pathname.match(/^\/api\/v1\/content\/[^/]+\/publish$/)){requirePermission(context,'content:publish');const id=url.pathname.split('/')[4];return send(res,200,{data:await contentService.setPublication(id,'published',context.user.id,requestId),requestId});}
+return send(res,404,{error:{code:'NOT_FOUND',message:'Route not found'},requestId});}catch(e:any){const status=e?.code==='UNAUTHORIZED'?401:e?.code==='FORBIDDEN'?403:e?.code==='NOT_FOUND'?404:e?.code==='VALIDATION_ERROR'?400:e?.code==='CONFLICT'?409:500;return send(res,status,{error:{code:e?.code||'INTERNAL_ERROR',message:status===500?'Internal server error':e.message},requestId});}});}
+function authenticate(req:IncomingMessage,requestId:string){const subject=req.headers.authorization?.replace(/^Bearer\s+/i,'')||(process.env.NODE_ENV!=='production'?process.env.DEV_IDENTITY_SUBJECT:undefined);if(!subject){const e:any=new Error('Authentication required');e.code='UNAUTHORIZED';throw e;}const roles=(process.env.DEV_IDENTITY_ROLES||'platform_admin').split(',').map(r=>r.trim()).filter(Boolean);return{user:{id:process.env.DEV_IDENTITY_USER_ID||'00000000-0000-0000-0000-000000000001',externalSubject:subject,email:process.env.DEV_IDENTITY_EMAIL||'developer@pngtourism.local',displayName:'Development User',roles:roles as any},requestId};}
+function requiredString(v:unknown,f:string){if(typeof v!=='string'||!v.trim())throwValidation(`${f} is required`);return v;}function throwValidation(message:string):never{const e:any=new Error(message);e.code='VALIDATION_ERROR';throw e;}async function readJson(req:IncomingMessage){const chunks:Buffer[]=[];for await(const c of req)chunks.push(Buffer.from(c));try{const p:unknown=JSON.parse(Buffer.concat(chunks).toString('utf8'));if(!p||typeof p!=='object'||Array.isArray(p))throw new Error();return p as Record<string,unknown>;}catch{throwValidation('Invalid JSON body');}}function send(res:ServerResponse,status:number,body:unknown){res.statusCode=status;res.end(JSON.stringify(body));}
