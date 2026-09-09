@@ -18,4 +18,7 @@
 - [x] API endpoint wired through the service boundary.
 - [x] Request-size validation implemented at the HTTP boundary.
 - [x] API and ADR documentation complete.
-- [ ] Public visitor exposure, rate limiting, persisted AI audit, provider integration, and adversarial evaluation remain hardening work.
+
+## Deferred hardening
+
+Public visitor exposure, rate limiting, persisted AI audit events, provider integration, stronger provenance controls, observability, and adversarial evaluation remain subsequent production-hardening work.
