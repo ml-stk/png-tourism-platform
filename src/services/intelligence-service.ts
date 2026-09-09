@@ -2,7 +2,6 @@ import type { ContentRepository, DestinationRepository, OperatorRepository, Prov
 import type { MetricPeriod, ProvincialInsight, TourismInsightReport, TourismKpiSnapshot } from '../domain/intelligence';
 
 export interface IntelligenceServiceDeps { operators: OperatorRepository; destinations: DestinationRepository; content: ContentRepository; provinces: ProvinceRepository; }
-
 export class IntelligenceService {
   constructor(private readonly deps: IntelligenceServiceDeps) {}
   async snapshot(period: MetricPeriod = 'month', now = new Date()): Promise<TourismKpiSnapshot> {
@@ -19,7 +18,8 @@ export class IntelligenceService {
     return provinces.map((province) => {
       const ops = operators.items.filter((x) => x.provinceCode === province.code);
       const dests = destinations.items.filter((x) => x.provinceCode === province.code);
-      return { provinceCode: province.code, publishedDestinations: dests.length, activeOperators: ops.filter((x) => x.status === 'active').length, compliantOperators: ops.filter((x) => x.status === 'active' && x.complianceStatus === 'compliant').length, publishedExperiences: content.items.filter((x) => x.type === 'experience').length, visitorSignals: 0 };
+      const experiences = content.items.filter((x) => x.type === 'experience' && x.provinceCode === province.code);
+      return { provinceCode: province.code, publishedDestinations: dests.length, activeOperators: ops.filter((x) => x.status === 'active').length, compliantOperators: ops.filter((x) => x.status === 'active' && x.complianceStatus === 'compliant').length, publishedExperiences: experiences.length, visitorSignals: 0 };
     });
   }
   async report(period: MetricPeriod = 'month', now = new Date()): Promise<TourismInsightReport> {
