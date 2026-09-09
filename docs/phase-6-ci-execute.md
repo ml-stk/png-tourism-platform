@@ -1,0 +1,1 @@
+Execute CI validation for offline provincial and kiosk channels.
