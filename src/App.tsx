@@ -1,11 +1,13 @@
 import { useState, type ReactNode } from 'react';
 import { BarChart3, Compass, FileText, LayoutDashboard, Menu, Map, Settings, ShieldCheck, Users, X } from 'lucide-react';
 import { destinations, metrics, operators } from './data';
+import TripPlanner from './visitor/TripPlanner';
 
-type View = 'overview' | 'industry' | 'destinations' | 'insights';
+type View = 'overview' | 'visitor' | 'industry' | 'destinations' | 'insights';
 
 const nav: { id: View; label: string; icon: typeof LayoutDashboard }[] = [
   { id: 'overview', label: 'Command Centre', icon: LayoutDashboard },
+  { id: 'visitor', label: 'Visitor Experience', icon: Map },
   { id: 'industry', label: 'Industry Ecosystem', icon: Users },
   { id: 'destinations', label: 'Destinations & Content', icon: Compass },
   { id: 'insights', label: 'Tourism Intelligence', icon: BarChart3 },
@@ -14,20 +16,13 @@ const nav: { id: View; label: string; icon: typeof LayoutDashboard }[] = [
 function App() {
   const [view, setView] = useState<View>('overview');
   const [open, setOpen] = useState(false);
-
   return <div className="min-h-screen bg-slate-50 text-slate-950">
     <aside className={`fixed inset-y-0 left-0 z-30 w-72 border-r border-slate-200 bg-white p-5 transition-transform lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}>
-      <div className="flex items-center justify-between">
-        <div><div className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-700">PNG TPA</div><div className="mt-1 text-lg font-bold">Tourism Platform</div></div>
-        <button className="lg:hidden" onClick={() => setOpen(false)}><X /></button>
-      </div>
+      <div className="flex items-center justify-between"><div><div className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-700">PNG TPA</div><div className="mt-1 text-lg font-bold">Tourism Platform</div></div><button className="lg:hidden" onClick={() => setOpen(false)}><X /></button></div>
       <div className="mt-10 space-y-1">{nav.map(item => { const Icon = item.icon; return <button key={item.id} onClick={() => { setView(item.id); setOpen(false); }} className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium ${view === item.id ? 'bg-emerald-50 text-emerald-800' : 'text-slate-600 hover:bg-slate-50'}`}><Icon size={18}/>{item.label}</button> })}</div>
       <div className="absolute bottom-5 left-5 right-5 rounded-2xl bg-slate-900 p-4 text-white"><div className="flex items-center gap-2 text-sm font-semibold"><ShieldCheck size={16}/> Platform status</div><div className="mt-2 text-xs text-slate-300">Architecture foundation online</div></div>
     </aside>
-    <main className="lg:pl-72">
-      <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 px-5 py-4 backdrop-blur lg:px-8"><div className="flex items-center justify-between"><button className="lg:hidden" onClick={() => setOpen(true)}><Menu/></button><div><div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Papua New Guinea Tourism Authority</div><h1 className="mt-1 text-xl font-bold">{nav.find(n => n.id === view)?.label}</h1></div><div className="flex items-center gap-2 text-sm text-slate-500"><Settings size={16}/> Platform Admin</div></div></header>
-      <section className="mx-auto max-w-7xl p-5 lg:p-8">{view === 'overview' && <Overview/>}{view === 'industry' && <Industry/>}{view === 'destinations' && <Destinations/>}{view === 'insights' && <Insights/>}</section>
-    </main>
+    <main className="lg:pl-72"><header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 px-5 py-4 backdrop-blur lg:px-8"><div className="flex items-center justify-between"><button className="lg:hidden" onClick={() => setOpen(true)}><Menu/></button><div><div className="text-xs font-semibold uppercase tracking-wider text-slate-500">Papua New Guinea Tourism Authority</div><h1 className="mt-1 text-xl font-bold">{nav.find(n => n.id === view)?.label}</h1></div><div className="flex items-center gap-2 text-sm text-slate-500"><Settings size={16}/> Platform Admin</div></div></header><section className="mx-auto max-w-7xl p-5 lg:p-8">{view === 'overview' && <Overview/>}{view === 'visitor' && <TripPlanner/>}{view === 'industry' && <Industry/>}{view === 'destinations' && <Destinations/>}{view === 'insights' && <Insights/>}</section></main>
   </div>;
 }
 function Overview() { return <div className="space-y-8"><div className="rounded-3xl bg-slate-900 p-7 text-white lg:p-9"><div className="max-w-3xl"><div className="mb-3 inline-flex rounded-full bg-white/10 px-3 py-1 text-xs font-semibold">NEXT-GENERATION DIGITAL TOURISM PLATFORM</div><h2 className="text-3xl font-bold tracking-tight lg:text-4xl">One connected platform for visitors, industry and tourism intelligence.</h2><p className="mt-4 max-w-2xl text-slate-300">A new foundation for destination discovery, operator services, content, analytics and TPA regulatory operations.</p></div></div><div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">{metrics.map(m => <div key={m.label} className="rounded-2xl border border-slate-200 bg-white p-5"><div className="text-sm text-slate-500">{m.label}</div><div className="mt-2 text-3xl font-bold">{m.value}</div><div className="mt-2 text-xs font-semibold text-emerald-700">{m.change}</div></div>)}</div><div className="grid gap-6 lg:grid-cols-2"><Panel title="Priority workstreams"><Work title="Visitor experience" text="Web, mobile/PWA, kiosk, QR handoffs and offline journeys."/><Work title="Industry ecosystem" text="Operator profiles, licensing, services, leads and partner connectivity."/><Work title="Content & campaigns" text="Destinations, events, experiences, media and campaign publishing."/><Work title="Tourism intelligence" text="Executive dashboards, provincial insights and operational reporting."/></Panel><Panel title="Platform guardrails"><Work title="Security by design" text="RBAC, auditability, least privilege and integration boundaries."/><Work title="API-first" text="Shared platform services rather than separate channel silos."/><Work title="Offline-first" text="Designed for PNG connectivity realities across visitor and provincial channels."/><Work title="AI-ready" text="AI concierge and intelligence capabilities built on governed platform data."/></Panel></div></div> }
