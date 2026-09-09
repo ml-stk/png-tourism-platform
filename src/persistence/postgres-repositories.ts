@@ -1,5 +1,5 @@
 import { Pool } from 'pg';
-import type { AuditEvent, ContentItem, Destination, Operator, OperatorStatus, Province, ProvinceCode, PublicationStatus } from '../domain/types';
+import type { AuditEvent, ContentItem, Destination, Operator, OperatorStatus, Province, ProvinceCode } from '../domain/types';
 import type { AuditWriter, ContentRepository, DestinationRepository, OperatorRepository, ProvinceRepository } from '../services/contracts';
 const asProvinceCode = (value: string): ProvinceCode => value as ProvinceCode;
 export class PostgresOperatorRepository implements OperatorRepository {
@@ -11,10 +11,10 @@ export class PostgresOperatorRepository implements OperatorRepository {
 }
 export class PostgresDestinationRepository implements DestinationRepository {
  constructor(private readonly pool:Pool) {}
- async list(options:any={}){const limit=Math.min(Math.max(options.limit??50,1),100),v:any[]=[],w:string[]=[];if(options.provinceCode){v.push(options.provinceCode);w.push(`province_code=$${v.length}`)}if(options.cursor){v.push(options.cursor);w.push(`id>$${v.length}::uuid`)}v.push(limit+1);const r=await this.pool.query(`select id,name,slug,province_code,publication_status,description,latitude,longitude from destinations ${w.length?`where ${w.join(' and ')}`:''} order by id limit $${v.length}`,v);const rows=r.rows.slice(0,limit);return{items:rows.map(toDestination),nextCursor:r.rows.length>limit?rows[rows.length-1].id:undefined};}
+ async list(options:any={}){const limit=Math.min(Math.max(options.limit??50,1),100),v:any[]=[],w:string[]=[];if(options.provinceCode){v.push(options.provinceCode);w.push(`province_code=$${v.length}`)}if(options.publicationStatus){v.push(options.publicationStatus);w.push(`publication_status=$${v.length}`)}if(options.cursor){v.push(options.cursor);w.push(`id>$${v.length}::uuid`)}v.push(limit+1);const r=await this.pool.query(`select id,name,slug,province_code,publication_status,description,latitude,longitude from destinations ${w.length?`where ${w.join(' and ')}`:''} order by id limit $${v.length}`,v);const rows=r.rows.slice(0,limit);return{items:rows.map(toDestination),nextCursor:r.rows.length>limit?rows[rows.length-1].id:undefined};}
  async getById(id:string){const r=await this.pool.query('select id,name,slug,province_code,publication_status,description,latitude,longitude from destinations where id=$1',[id]);return r.rows[0]?toDestination(r.rows[0]):null;}
  async save(d:Destination){const r=await this.pool.query(`insert into destinations(id,name,slug,province_code,publication_status,description,latitude,longitude) values($1,$2,$3,$4,$5,$6,$7,$8) returning id,name,slug,province_code,publication_status,description,latitude,longitude`,[d.id,d.name,d.slug,d.provinceCode,d.publicationStatus,d.description??null,d.latitude??null,d.longitude??null]);return toDestination(r.rows[0]);}
- async update(d:Destination){const r=await this.pool.query(`update destinations set name=$1,slug=$2,province_code=$3,publication_status=$4,description=$5,latitude=$6,longitude=$7,updated_at=now() where id=$8 returning id,name,slug,province_code,publication_status,description,latitude,longitude`,[d.name,d.slug,d.provinceCode,d.publicationStatus,d.description??null,d.latitude??null,d.longitude??null,d.id]);return r.rows[0]?toDestination(r.rows[0]):null;}
+ async update(d:Destination){const r=await this.pool.query(`update destinations set name=$1,slug=$2,province_code=$3,publication_status=$4,description=$5,latitude=$6,longitude=$7 where id=$8 returning id,name,slug,province_code,publication_status,description,latitude,longitude`,[d.name,d.slug,d.provinceCode,d.publicationStatus,d.description??null,d.latitude??null,d.longitude??null,d.id]);return r.rows[0]?toDestination(r.rows[0]):null;}
 }
 export class PostgresContentRepository implements ContentRepository {
  constructor(private readonly pool:Pool) {}

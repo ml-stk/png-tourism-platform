@@ -8,7 +8,7 @@ export interface OperatorRepository {
 }
 
 export interface DestinationRepository {
-  list(options?: { provinceCode?: string; cursor?: string; limit?: number }): Promise<{ items: Destination[]; nextCursor?: string }>;
+  list(options?: { provinceCode?: string; publicationStatus?: PublicationStatus; cursor?: string; limit?: number }): Promise<{ items: Destination[]; nextCursor?: string }>;
   getById(id: string): Promise<Destination | null>;
 }
 
