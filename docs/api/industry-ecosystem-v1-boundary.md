@@ -1,0 +1,1 @@
+Public industry discovery is limited to explicit published profile and experience records. Regulatory source records are not returned by these contracts. Visitor leads carry only operational routing data and do not include licensing or compliance information.

@@ -1,0 +1,1 @@
+Release gate: merge only after feature CI passes. No legacy MVP repository changes are part of this workstream.

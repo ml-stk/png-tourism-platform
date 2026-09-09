@@ -1,0 +1,1 @@
+Initial industry ecosystem domain/service slice is implemented. The branch is ready for CI validation. No legacy MVP repository changes are included.

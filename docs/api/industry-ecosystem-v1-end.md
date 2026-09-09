@@ -1,0 +1,1 @@
+Foundation increment complete. CI now gates the branch.

@@ -1,0 +1,1 @@
+Tests should verify public publication filtering, active operator constraints, optimistic conflict handling, province-scoped reads, and lead routing boundaries.
