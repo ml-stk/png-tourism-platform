@@ -1,4 +1,4 @@
-import type { ContentItem, Destination, Operator, OperatorStatus, Province, PublicationStatus } from '../domain/types';
+import type { ContentItem, Destination, Operator, OperatorStatus, Province, PublicationStatus, ProvinceCode } from '../domain/types';
 
 export interface OperatorRepository {
   list(options?: { provinceCode?: string; status?: string; cursor?: string; limit?: number }): Promise<{ items: Operator[]; nextCursor?: string }>;
@@ -8,14 +8,14 @@ export interface OperatorRepository {
 }
 
 export interface DestinationRepository {
-  list(options?: { provinceCode?: string; publicationStatus?: PublicationStatus; cursor?: string; limit?: number }): Promise<{ items: Destination[]; nextCursor?: string }>;
+  list(options?: { provinceCode?: ProvinceCode; publicationStatus?: PublicationStatus; cursor?: string; limit?: number }): Promise<{ items: Destination[]; nextCursor?: string }>;
   getById(id: string): Promise<Destination | null>;
 }
 
 export interface ProvinceRepository { list(): Promise<Province[]>; getByCode(code: string): Promise<Province | null>; }
 
 export interface ContentRepository {
-  list(options?: { type?: ContentItem['type']; publicationStatus?: PublicationStatus; cursor?: string; limit?: number }): Promise<{ items: ContentItem[]; nextCursor?: string }>;
+  list(options?: { type?: ContentItem['type']; publicationStatus?: PublicationStatus; provinceCode?: ProvinceCode; cursor?: string; limit?: number }): Promise<{ items: ContentItem[]; nextCursor?: string }>;
   getById(id: string): Promise<ContentItem | null>;
   save(item: ContentItem): Promise<ContentItem>;
   update(item: ContentItem, expectedVersion?: number): Promise<ContentItem | null>;
