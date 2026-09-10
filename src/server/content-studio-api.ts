@@ -1,0 +1,29 @@
+import { randomUUID } from 'node:crypto';
+import { Pool } from 'pg';
+import type { IncomingMessage, ServerResponse } from 'node:http';
+import { DestinationService, ContentService } from '../services/content-service';
+import { PostgresAuditRepository, PostgresContentRepository, PostgresDestinationRepository } from '../persistence/postgres-repositories';
+import { authenticateBearerToken } from '../auth/token-auth';
+import { requirePermission, requireProvinceAccess } from '../auth/authorization';
+import { applySecurityHeaders, enforceRateLimit, requestBodyLimit } from './security';
+import type { ProvinceCode } from '../domain/types';
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const audit = new PostgresAuditRepository(pool);
+const destinations = new DestinationService(new PostgresDestinationRepository(pool), audit);
+const content = new ContentService(new PostgresContentRepository(pool), audit);
+const provinceCodes = ['NCD','CENTRAL','GULF','MILNE_BAY','ORO','MOROBE','MADANG','EAST_SEPIK','WEST_SEPIK','MANUS','NEW_IRELAND','EAST_NEW_BRITAIN','WEST_NEW_BRITAIN','BOUGAINVILLE','ENGA','EASTERN_HIGHLANDS','SIMBU','WESTERN_HIGHLANDS','SOUTHERN_HIGHLANDS','JIWAKA','HELA','WESTERN'];
+export async function handleContentStudioApi(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
+ const url = new URL(req.url || '/', 'http://localhost'); if (!url.pathname.startsWith('/api/v1/content-studio/')) return false;
+ const requestId = req.headers['x-request-id']?.toString() || randomUUID(); res.setHeader('x-request-id', requestId); res.setHeader('content-type','application/json; charset=utf-8'); applySecurityHeaders(res);
+ try { requestBodyLimit(req); if(!enforceRateLimit(req,res)) return true; const context=authenticate(req,requestId); requirePermission(context,'content:write');
+   const destinationMatch=url.pathname.match(/^\/api\/v1\/content-studio\/destinations\/([^/]+)$/); const contentMatch=url.pathname.match(/^\/api\/v1\/content-studio\/content\/([^/]+)$/); const publishMatch=url.pathname.match(/^\/api\/v1\/content-studio\/content\/([^/]+)\/publish$/);
+   if(req.method==='PATCH'&&destinationMatch){ const id=decodeURIComponent(destinationMatch[1]); const current=await destinations.get(id); requireProvinceAccess(context,current.provinceCode); const b=await readJson(req); const provinceCode=b.provinceCode===undefined?undefined:parseProvince(b.provinceCode); if(provinceCode) requireProvinceAccess(context,provinceCode); const data=await destinations.update(id,{name:typeof b.name==='string'?b.name:undefined,slug:typeof b.slug==='string'?b.slug:undefined,description:typeof b.description==='string'?b.description:undefined,latitude:typeof b.latitude==='number'?b.latitude:undefined,longitude:typeof b.longitude==='number'?b.longitude:undefined,provinceCode},context.user.id,requestId); return send(res,200,{data,requestId}); }
+   if(req.method==='PATCH'&&contentMatch){ const id=decodeURIComponent(contentMatch[1]); const current=await content.get(id); if(current.provinceCode) requireProvinceAccess(context,current.provinceCode); const b=await readJson(req); const provinceCode=b.provinceCode===undefined?undefined:parseProvince(b.provinceCode); if(provinceCode) requireProvinceAccess(context,provinceCode); const data=await content.update(id,{title:typeof b.title==='string'?b.title:undefined,slug:typeof b.slug==='string'?b.slug:undefined,summary:typeof b.summary==='string'?b.summary:undefined,body:typeof b.body==='string'?b.body:undefined,provinceCode},context.user.id,requestId); return send(res,200,{data,requestId}); }
+   if(req.method==='POST'&&publishMatch){ requirePermission(context,'content:publish'); const id=decodeURIComponent(publishMatch[1]); const current=await content.get(id); if(current.provinceCode) requireProvinceAccess(context,current.provinceCode); const data=await content.setPublication(id,'published',context.user.id,requestId); return send(res,200,{data,requestId}); }
+   return send(res,404,{error:{code:'NOT_FOUND',message:'Content studio route not found'},requestId});
+ } catch(e:any){const status=e?.code==='UNAUTHORIZED'?401:e?.code==='FORBIDDEN'?403:e?.code==='NOT_FOUND'?404:e?.code==='VALIDATION_ERROR'?400:e?.code==='CONFLICT'?409:500;return send(res,status,{error:{code:e?.code||'INTERNAL_ERROR',message:status===500?'Internal server error':e.message},requestId});}
+}
+function authenticate(req:IncomingMessage,requestId:string){if(process.env.NODE_ENV==='production')return{user:authenticateBearerToken(req.headers.authorization,process.env.AUTH_JWT_SECRET||''),requestId};const subject=req.headers.authorization?.replace(/^Bearer\s+/i,'')||(process.env.DEV_IDENTITY_SUBJECT||'development');const roles=(process.env.DEV_IDENTITY_ROLES||'platform_admin').split(',').map(r=>r.trim()).filter(Boolean);return{user:{id:process.env.DEV_IDENTITY_USER_ID||'00000000-0000-0000-0000-000000000001',externalSubject:subject,email:process.env.DEV_IDENTITY_EMAIL||'developer@pngtourism.local',displayName:'Development User',roles:roles as any},requestId};}
+function parseProvince(v:unknown):ProvinceCode|undefined{if(v===undefined||v===null||v==='')return undefined;if(typeof v!=='string'||!provinceCodes.includes(v))throwValidation('Invalid province code');return v as ProvinceCode;}
+async function readJson(req:IncomingMessage){const chunks:Buffer[]=[];for await(const c of req)chunks.push(Buffer.from(c));try{const p:unknown=JSON.parse(Buffer.concat(chunks).toString('utf8'));if(!p||typeof p!=='object'||Array.isArray(p))throw new Error();return p as Record<string,unknown>}catch{throwValidation('Invalid JSON body')}}
+function throwValidation(message:string):never{const e:any=new Error(message);e.code='VALIDATION_ERROR';throw e} function send(res:ServerResponse,status:number,body:unknown){res.statusCode=status;res.end(JSON.stringify(body));return true;}
