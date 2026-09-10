@@ -5,3 +5,5 @@ Implemented governed destination media metadata, published-only public projectio
 ## Validation
 
 The visitor destination explorer syntax was corrected after CI identified a TypeScript parser error. Validation is required before MR !26 is merged.
+
+CI checkpoint.
