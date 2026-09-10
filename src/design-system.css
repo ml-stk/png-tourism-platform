@@ -1,5 +1,26 @@
-@import url('./visitor/public-homepage.css');
+:root {
+  --png-night: #071b2a;
+  --png-deep: #0b2f3f;
+  --png-ocean: #0b6477;
+  --png-lagoon: #0f8b8d;
+  --png-leaf: #18794e;
+  --png-sun: #f4b942;
+  --png-sand: #f4efe4;
+  --png-mist: #e8f3f1;
+  --png-ink: #102a43;
+}
 
-:root{--png-night:#071b2a;--png-ocean:#0b6477;--png-lagoon:#0f8b8d;--png-leaf:#18794e;--png-sun:#f4b942;--png-sand:#f4efe4;--png-mist:#e8f3f1;--png-brand-green:#245f2a}
-
-.png-shell{background:linear-gradient(180deg,#f8faf7 0%,#eef4ef 100%);color:#17301d}.png-sidebar{background:linear-gradient(180deg,#071b2a 0%,#0b2f3f 100%);border-color:rgba(255,255,255,.1)}.png-brand-mark{box-shadow:0 8px 24px rgba(0,0,0,.18)}.png-header{background:rgba(7,27,42,.94);color:#fff;border-color:rgba(255,255,255,.1)}.png-kicker{color:#8fd5c8}.png-content{max-width:1680px;margin:0 auto}.png-status{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1)}
+html { scroll-behavior: smooth; }
+body { background: var(--png-night); color: var(--png-ink); }
+::selection { background: rgba(244,185,66,.35); }
+.png-shell { background: radial-gradient(circle at 80% -10%, rgba(15,139,141,.30), transparent 32rem), radial-gradient(circle at 20% 20%, rgba(24,121,78,.18), transparent 28rem), linear-gradient(135deg, #071b2a 0%, #0a2737 45%, #0d3947 100%); }
+.png-sidebar { background: linear-gradient(180deg, rgba(5,24,36,.98), rgba(8,39,51,.98)); border-color: rgba(255,255,255,.10) !important; }
+.png-nav-active { background: linear-gradient(90deg, rgba(15,139,141,.30), rgba(24,121,78,.20)); color: white; box-shadow: inset 3px 0 0 var(--png-sun); }
+.png-content { background: linear-gradient(180deg, rgba(244,239,228,.98), rgba(232,243,241,.98)); min-height: calc(100vh - 77px); }
+.png-header { background: rgba(7,27,42,.92); border-color: rgba(255,255,255,.10) !important; color: white; }
+.png-kicker { color: #8fd5c8; }
+.png-muted { color: #b6c9cf; }
+.png-brand-mark { background: linear-gradient(135deg, var(--png-lagoon), var(--png-leaf)); box-shadow: 0 10px 30px rgba(15,139,141,.25); }
+.png-status { background: linear-gradient(135deg, rgba(15,139,141,.28), rgba(24,121,78,.18)); border: 1px solid rgba(255,255,255,.10); }
+.png-section-title { color: var(--png-night); }
+@media (max-width: 1023px) { .png-content { min-height: calc(100vh - 69px); } }
