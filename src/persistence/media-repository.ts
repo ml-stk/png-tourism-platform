@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { Pool } from 'pg';
 import type { MediaAsset } from '../domain/content-studio';
 import type { ProvinceCode, PublicationStatus } from '../domain/types';
@@ -5,7 +6,7 @@ import type { ProvinceCode, PublicationStatus } from '../domain/types';
 export class PostgresMediaRepository {
   constructor(private readonly pool: Pool) {}
   async create(input: Omit<MediaAsset, 'id' | 'updatedAt'>): Promise<MediaAsset> {
-    const id = crypto.randomUUID(); const updatedAt = new Date().toISOString();
+    const id = randomUUID(); const updatedAt = new Date().toISOString();
     const r = await this.pool.query(`insert into media_assets(id,kind,storage_key,public_url,alt_text,caption,width,height,mime_type,byte_size,checksum,province_code,publication_status,version,updated_at) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) returning *`, [id,input.kind,input.storageKey,input.publicUrl??null,input.altText,input.caption??null,input.width??null,input.height??null,input.mimeType,input.byteSize??null,input.checksum??null,input.provinceCode??null,input.publicationStatus,input.version,updatedAt]);
     return map(r.rows[0]);
   }
