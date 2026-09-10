@@ -1,0 +1,1 @@
+Destination projection pipeline checkpoint.

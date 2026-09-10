@@ -1,0 +1,1 @@
+Destination projection implementation execution checkpoint.
