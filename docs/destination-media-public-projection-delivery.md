@@ -1,0 +1,1 @@
+Destination Media and Public Content Projection v1: media metadata, governed associations, public published projection, responsive visitor presentation, provenance/freshness/offline identity, and CI validation boundary.
