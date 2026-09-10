@@ -1,22 +1,23 @@
-# Industry Ecosystem v1
+# Industry Ecosystem API
 
-The industry ecosystem connects active tourism operators with governed visitor experiences without exposing regulatory records.
+The Industry Ecosystem API exposes governed public discovery, operator-scoped profile and experience management, and visitor lead capture.
 
-## Boundaries
+## Public discovery
 
-- Public profiles contain only explicitly published operator-facing information.
-- Experiences use the industry service boundary and cannot bypass the governed publication path.
-- Leads are created against active operators and remain operator-scoped.
-- Province filtering is explicit for public discovery.
-- Regulatory licensing, compliance, suspension reasons, and private operator records remain outside the visitor surface.
-- AI access continues through governed tools and public source kinds only.
+- `GET /api/v1/industry/profiles?province=<PROVINCE>` — published industry profiles only.
+- `GET /api/v1/industry/experiences?province=<PROVINCE>&destination=<ID>` — published experiences only.
+- `POST /api/v1/industry/leads` — creates a visitor, QR, or referral lead. If an experience is supplied, it must be published and belong to the target operator.
 
-## Service operations
+## Operator routes
 
-`IndustryEcosystemService.publicProfiles()` and `publicExperiences()` provide visitor discovery.
+Authenticated routes use the existing `operator:read` permission and operator/province resource scoping.
 
-Operator-facing profile/experience mutations use optimistic versions and require an active operator. Experience publication is deliberately delegated to the existing governed content publication workflow.
+- `GET /api/v1/industry/profiles/:operatorId`
+- `PUT /api/v1/industry/profiles/:operatorId`
+- `GET /api/v1/industry/experiences/:experienceId`
+- `PUT /api/v1/industry/experiences/:experienceId`
+- `GET /api/v1/industry/leads?operatorId=<ID>`
 
-`createLead()` provides a visitor/referral handoff to an active operator. Operator lead retrieval is scoped to the operator identity.
+Experience publication remains governed: operators may maintain draft/submitted/suspended states, while the existing content publication workflow remains the authoritative publication path for governed public content.
 
-Future HTTP endpoints should remain under `/api/v1/industry` and `/api/v1/leads`, with server-side authentication, RBAC, resource scoping, validation, audit for regulatory/security mutations, and published-only public reads.
+No regulatory operator fields are exposed through these routes.
