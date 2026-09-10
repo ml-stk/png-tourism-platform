@@ -2,6 +2,7 @@ image: node:22-alpine
 
 stages:
   - verify
+  - deploy
 
 cache:
   paths:
@@ -16,3 +17,18 @@ build:
     - npm run build:server
   rules:
     - if: '$CI_COMMIT_BRANCH'
+
+pages:
+  stage: deploy
+  script:
+    - npm install
+    - npm run build
+    - mkdir -p public-pages
+    - cp -r dist/. public-pages/
+  artifacts:
+    paths:
+      - public-pages
+  pages:
+    publish: public-pages
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
