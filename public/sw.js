@@ -1,4 +1,4 @@
-const VERSION = 'v4';
+const VERSION = 'v5';
 const CACHE = `png-tourism-shell-${VERSION}`;
 const BASE_URL = new URL('./', self.location);
 const APP_SHELL = [
@@ -29,6 +29,16 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
   if (url.pathname.endsWith('/sw.js') || url.pathname.includes('/api/')) {
     event.respondWith(fetch(request, { cache: 'no-store' }));
+    return;
+  }
+
+  // Never serve JavaScript or CSS bundles from the shell cache. Vite fingerprints
+  // these assets, so network-first loading guarantees a newly deployed bundle is used.
+  if (url.pathname.endsWith('.js') || url.pathname.endsWith('.css')) {
+    event.respondWith(
+      fetch(request, { cache: 'no-store' })
+        .catch(() => caches.match(request)),
+    );
     return;
   }
 
