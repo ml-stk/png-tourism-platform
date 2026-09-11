@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: png-tourism-platform-api
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build:server
+    startCommand: npm run start:api
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: AUTH_JWT_SECRET
+        sync: false
+      - key: REQUEST_BODY_MAX_BYTES
+        value: "1048576"
+      - key: RATE_LIMIT_WINDOW_MS
+        value: "60000"
+      - key: RATE_LIMIT_MAX_REQUESTS
+        value: "120"
+      - key: AI_PROVIDER
+        value: adapter
+      - key: AI_MODEL
+        value: governed-adapter-v1
+      - key: AI_ALLOWED_MODELS
+        value: governed-adapter-v1
+      - key: AI_PROMPT_VERSION
+        value: concierge-v1
