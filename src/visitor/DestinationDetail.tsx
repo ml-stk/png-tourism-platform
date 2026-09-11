@@ -7,11 +7,19 @@ type Destination = { id: string; slug: string; name: string; provinceCode: strin
 type Props = { destinationId: string; onBack: () => void };
 const itineraryKey = 'png-tourism:visitor-destination-itinerary:v1';
 const passportKey = 'png-tourism:visitor-destination-passport:v1';
+const fallbackMedia: Record<string, string> = {
+  'kokoda-track': 'https://commons.wikimedia.org/wiki/Special:FilePath/OwenStanleyRangeOwersCornerView.jpg',
+  'milne-bay': 'https://www.divediscovery.com/images/kenu_kundu_festival_4.jpg',
+  rabaul: 'https://img.rezdy.com/PRODUCT_IMAGE/13699/national-mask-festival-rabaul-papua-new-guinea.jpg',
+  'sepik-river': 'https://papuanewguinea.travel/wp-content/uploads/2026/01/Life-along-the-Sepik-River-at-dusk-1-768x576.jpg',
+  'western-highlands': 'https://peakvisor.com/photo/SD/Papua-New-Guinea-mount-hagen-august-1463442698.jpg',
+};
 function load(key: string): string[] { try { return JSON.parse(localStorage.getItem(key) || '[]') as string[]; } catch { return []; } }
 function emit(destination: Destination, eventType: string) { if (!navigator.onLine) return; void fetch('/api/v1/visitor/engagement', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ eventType, source: 'web', destinationId: destination.id, provinceCode: destination.provinceCode, metadata: { contentVersion: destination.contentVersion } }) }).catch(() => undefined); }
+function withFallbackMedia(destination: Destination): Destination { if (destination.media?.length || !fallbackMedia[destination.slug]) return destination; return { ...destination, media: [{ id: `fallback-${destination.slug}`, publicUrl: fallbackMedia[destination.slug], altText: `${destination.name}, Papua New Guinea` }] }; }
 export default function DestinationDetail({ destinationId, onBack }: Props) {
   const [destination, setDestination] = useState<Destination | null>(null); const [loading, setLoading] = useState(true); const [offline, setOffline] = useState(() => typeof navigator !== 'undefined' && !navigator.onLine); const [saved, setSaved] = useState(() => load(itineraryKey)); const [visited, setVisited] = useState(() => load(passportKey)); const [notice, setNotice] = useState('');
-  useEffect(() => { let alive = true; fetch(`/api/v1/public/destinations/${encodeURIComponent(destinationId)}`).then(r => { if (!r.ok) throw new Error(); return r.json(); }).then(x => { if (alive) { setDestination(x.data); emit(x.data, 'experience_view'); } }).catch(() => setOffline(true)).finally(() => alive && setLoading(false)); const on = () => setOffline(false); const off = () => setOffline(true); window.addEventListener('online', on); window.addEventListener('offline', off); return () => { alive = false; window.removeEventListener('online', on); window.removeEventListener('offline', off); }; }, [destinationId]);
+  useEffect(() => { let alive = true; fetch(`/api/v1/public/destinations/${encodeURIComponent(destinationId)}`).then(r => { if (!r.ok) throw new Error(); return r.json(); }).then(x => { if (alive) { const value = withFallbackMedia(x.data); setDestination(value); emit(value, 'experience_view'); } }).catch(() => setOffline(true)).finally(() => alive && setLoading(false)); const on = () => setOffline(false); const off = () => setOffline(true); window.addEventListener('online', on); window.addEventListener('offline', off); return () => { alive = false; window.removeEventListener('online', on); window.removeEventListener('offline', off); }; }, [destinationId]);
   useEffect(() => localStorage.setItem(itineraryKey, JSON.stringify(saved)), [saved]); useEffect(() => localStorage.setItem(passportKey, JSON.stringify(visited)), [visited]);
   const inTrip = useMemo(() => saved.includes(destinationId), [saved, destinationId]); const hasVisited = useMemo(() => visited.includes(destinationId), [visited, destinationId]);
   if (loading) return <section className="rounded-[2rem] bg-[#071b2a] p-8 text-white">Loading published destination…</section>;
