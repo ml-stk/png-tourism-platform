@@ -12,6 +12,19 @@ export function applySecurityHeaders(res: ServerResponse): void {
   if (process.env.NODE_ENV === 'production') res.setHeader('strict-transport-security', 'max-age=31536000; includeSubDomains');
 }
 
+export function applyCors(req: IncomingMessage, res: ServerResponse): boolean {
+  const origin = req.headers.origin;
+  const allowed = (process.env.CORS_ALLOWED_ORIGIN || '').split(',').map(value => value.trim()).filter(Boolean);
+  if (!origin || !allowed.includes(origin)) return !origin;
+  res.setHeader('access-control-allow-origin', origin);
+  res.setHeader('vary', 'Origin');
+  res.setHeader('access-control-allow-methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+  res.setHeader('access-control-allow-headers', 'Authorization, Content-Type, Accept, X-Request-Id');
+  res.setHeader('access-control-max-age', '600');
+  if (req.method === 'OPTIONS') { res.statusCode = 204; res.end(); return false; }
+  return true;
+}
+
 export function enforceRateLimit(req: IncomingMessage, res: ServerResponse): boolean {
   const windowMs = Number(process.env.RATE_LIMIT_WINDOW_MS || 60_000);
   const maxRequests = Number(process.env.RATE_LIMIT_MAX_REQUESTS || 120);
