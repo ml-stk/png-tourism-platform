@@ -14,7 +14,7 @@ const destinationHeroImages: Record<string, string> = {
   'kokoda-track': 'https://commons.wikimedia.org/wiki/Special:FilePath/OwenStanleyRangeOwersCornerView.jpg',
   'milne-bay': 'https://www.divediscovery.com/images/kenu_kundu_festival_4.jpg',
   rabaul: 'https://img.rezdy.com/PRODUCT_IMAGE/13699/national-mask-festival-rabaul-papua-new-guinea.jpg',
-  'sepik-river': 'https://www.lernidee.de/images/travel-image/180-2_sonnenuntergang_auf_dem_sepik_fluss_-_marziafra_fotolia_x.jpg',
+  'sepik-river': 'https://papuanewguinea.travel/wp-content/uploads/2026/01/Life-along-the-Sepik-River-at-dusk-1-768x576.jpg',
   'western-highlands': 'https://peakvisor.com/photo/SD/Papua-New-Guinea-mount-hagen-august-1463442698.jpg',
 };
 const fallback: Destination[] = [
