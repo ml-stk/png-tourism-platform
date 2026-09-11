@@ -4,7 +4,7 @@ import App from './App';
 import './index.css';
 import './design-system.css';
 
-const SERVICE_WORKER_VERSION = '4';
+const SERVICE_WORKER_VERSION = '5';
 const API_ORIGIN = 'https://png-tourism-platform-api.onrender.com';
 
 const browserFetch = window.fetch.bind(window);

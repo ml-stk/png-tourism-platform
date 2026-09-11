@@ -1,4 +1,4 @@
-const VERSION = 'v3';
+const VERSION = 'v4';
 const CACHE = `png-tourism-shell-${VERSION}`;
 const BASE_URL = new URL('./', self.location);
 const APP_SHELL = [
