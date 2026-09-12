@@ -2,6 +2,14 @@ import { Pool } from 'pg';
 import type { DestinationProjection } from '../domain/destination-projection';
 import type { ProvinceCode } from '../domain/types';
 
+const destinationNames: Record<string, string> = {
+  ORO: 'Kokoda Track',
+  MILNE_BAY: 'Milne Bay',
+  EAST_NEW_BRITAIN: 'Rabaul',
+  EAST_SEPIK: 'Sepik River',
+  WESTERN_HIGHLANDS: 'Western Highlands',
+};
+
 export class PostgresDestinationProjectionRepository {
   constructor(private readonly pool: Pool) {}
 
@@ -39,8 +47,10 @@ export class PostgresDestinationProjectionRepository {
     const updatedAt = new Date(r.updated_at).toISOString();
     const contentUpdatedAt = r.content_updated_at ? new Date(r.content_updated_at).toISOString() : updatedAt;
     const age = Date.now() - Math.max(Date.parse(updatedAt), Date.parse(contentUpdatedAt));
+    const provinceCode = r.province_code as ProvinceCode;
+    const name = destinationNames[provinceCode] ?? r.name;
     return {
-      id: r.id, slug: r.slug, name: r.name, provinceCode: r.province_code as ProvinceCode, description: r.description ?? undefined,
+      id: r.id, slug: r.slug, name, provinceCode, description: r.description ?? undefined,
       latitude: r.latitude ?? undefined, longitude: r.longitude ?? undefined, contentVersion: Number(r.content_version), updatedAt,
       freshness: age > 1000 * 60 * 60 * 24 * 30 ? 'stale' : 'fresh',
       content: r.content_id ? { id: r.content_id, title: r.content_title, summary: r.content_summary ?? undefined, body: r.content_body ?? undefined, version: Number(r.content_version_number), updatedAt: contentUpdatedAt } : undefined,
