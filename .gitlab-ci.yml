@@ -2,6 +2,7 @@ image: node:22-alpine
 
 stages:
   - verify
+  - smoke
   - deploy
 
 cache:
@@ -15,6 +16,14 @@ build:
     - npm run test
     - npm run build
     - npm run build:server
+  rules:
+    - if: '$CI_COMMIT_BRANCH'
+
+api_smoke:
+  stage: smoke
+  allow_failure: true
+  script:
+    - node --input-type=module -e "const base='https://png-tourism-platform-api.onrender.com'; const sleep=ms=>new Promise(r=>setTimeout(r,ms)); const request=async(path,attempt=1)=>{try{const res=await fetch(base+path,{headers:{Accept:'application/json'}}); const text=await res.text(); console.log(path+' -> '+res.status+' '+text.slice(0,1000)); if(!res.ok) throw new Error('HTTP '+res.status); return text;}catch(error){console.log(path+' attempt '+attempt+' failed: '+error.message); if(attempt>=3) throw error; await sleep(10000); return request(path,attempt+1);}}; await request('/health'); const body=JSON.parse(await request('/api/v1/public/destinations')); const items=Array.isArray(body.data)?body.data:body.data?.items; if(!Array.isArray(items)||items.length<5) throw new Error('Expected at least 5 published destinations, received '+(Array.isArray(items)?items.length:'invalid payload')); console.log('LIVE API OK: '+items.length+' published destinations returned');"
   rules:
     - if: '$CI_COMMIT_BRANCH'
 
