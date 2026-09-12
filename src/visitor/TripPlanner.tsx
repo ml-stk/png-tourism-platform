@@ -5,6 +5,7 @@ type Place = { id: string; name: string; province: string; description: string; 
 type Experience = { id: string; operatorId: string; title: string; summary: string; provinceCode: string; status: 'published' };
 type VisitState = { visitedAt: string; verified: boolean };
 
+const API_ORIGIN = 'https://png-tourism-platform-api.onrender.com';
 const itineraryKey = 'png-tourism:visitor-itinerary:v3';
 const experienceItineraryKey = 'png-tourism:visitor-experience-itinerary:v1';
 const passportKey = 'png-tourism:visitor-passport:v2';
@@ -43,26 +44,34 @@ export default function TripPlanner() {
   const loadPublishedData = async () => {
     setLoading(true); setError('');
     try {
-      // Render free web services can take about a minute to wake from idle. Give
-      // the authoritative destination request enough time to survive that cold start.
-      const response = await fetchWithTimeout('/api/v1/public/destinations', { headers: { Accept: 'application/json' } }, 75000);
-      if (!response.ok) throw new Error(`Destination request failed (${response.status})`);
+      // Use the authoritative Render origin directly. This avoids depending on
+      // the global fetch rewrite in main.tsx and makes browser failures diagnosable.
+      const response = await fetchWithTimeout(`${API_ORIGIN}/api/v1/public/destinations`, { headers: { Accept: 'application/json' } }, 75000);
+      if (!response.ok) throw new Error(`Destination request returned HTTP ${response.status}`);
       const payload = await response.json() as { data?: { items?: unknown[] } | unknown[] };
       const raw = Array.isArray(payload.data) ? payload.data : payload.data?.items;
       const nextPlaces = normalizePlaces(raw);
-      if (!nextPlaces.length) throw new Error('No published destinations returned');
+      if (!nextPlaces.length) throw new Error('Destination request returned no valid published destinations');
       setPlaces(nextPlaces); setOffline(false);
       setStops(current => current.filter(stop => nextPlaces.some(place => place.id === stop.id)));
       try {
-        const response = await fetchWithTimeout('/api/v1/industry/experiences', { headers: { Accept: 'application/json' } }, 8000);
+        const response = await fetchWithTimeout(`${API_ORIGIN}/api/v1/industry/experiences`, { headers: { Accept: 'application/json' } }, 8000);
         if (response.ok) {
           const payload = await response.json() as { data?: unknown };
           if (Array.isArray(payload.data)) setExperiences((payload.data as Experience[]).filter(item => item.status === 'published'));
         }
-      } catch { /* Optional projection; destinations remain authoritative. */ }
-    } catch {
+      } catch (experienceError) {
+        console.warn('[TripPlanner] optional experiences request failed', experienceError);
+      }
+    } catch (loadError) {
+      const detail = loadError instanceof DOMException && loadError.name === 'AbortError'
+        ? 'Live tourism data request timed out.'
+        : loadError instanceof Error
+          ? loadError.message
+          : 'Unknown browser request error.';
+      console.error('[TripPlanner] live destination request failed', loadError);
       setPlaces(fallbackPlaces); setOffline(true);
-      setError('Live tourism data is unavailable right now. Showing the governed visitor-safe destination set.');
+      setError(`Live tourism data is unavailable right now. Showing the governed visitor-safe destination set. (${detail})`);
     } finally { setLoading(false); }
   };
 
@@ -113,7 +122,7 @@ export default function TripPlanner() {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><h3 className="text-xl font-bold">Discover destinations</h3><p className="mt-1 text-sm text-slate-500">Live published visitor projection, with governed offline fallback.</p></div><span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold">{filtered.length} available</span></div>
           <div className="mt-5 grid gap-3 sm:grid-cols-[1fr_auto]"><label className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2"><Search size={16} className="text-slate-400"/><input aria-label="Search destinations" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search destinations" className="w-full bg-transparent text-sm outline-none"/></label><select aria-label="Filter province" value={province} onChange={event => setProvince(event.target.value)} className="rounded-xl border border-slate-200 px-3 py-2 text-sm">{provinces.map(item => <option key={item}>{item}</option>)}</select></div>
           <div className="mt-5 grid gap-4 md:grid-cols-2">
-            {filtered.map(place => <article key={place.id} className="rounded-2xl border border-slate-200 p-5"><div className="flex items-start justify-between gap-3"><div><h4 className="font-bold">{place.name}</h4><div className="mt-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{place.province}</div></div><MapPin size={18} className="text-emerald-700"/></div><p className="mt-3 text-sm leading-6 text-slate-600">{place.description}</p><div className="mt-4 flex flex-wrap gap-2"><button onClick={() => add(place)} className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white"><Plus size={15}/> Add to trip</button><button onClick={() => createHandoff(place.id)} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold"><Link2 size={15}/> QR handoff</button></div></article>)}
+            {filtered.map(place => <article key={place.id} className="rounded-2xl border border-slate-200 p-5"><div className="flex items-start justify-between gap-3"><div><h4 className="font-bold">{place.name}</h4><div className="mt-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{place.province}</div></div><MapPin size={18} className="text-emerald-700"/></div><p className="mt-3 text-sm leading-6 text-slate-600">{place.description}</p><div className="mt-4 flex flex-wrap gap-2"><button onClick={() => add(place)} className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white"><Plus size={15}/> Add to trip</button><button onClick={() => createHandoff(place.id)} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold"><Link2 size={15}/> QR handoff</button></div></div></article>)}
           </div>
           {loading && <div className="mt-4 text-center text-xs text-slate-400">Refreshing published destination data…</div>}
           {filtered.length === 0 && !loading && <div className="mt-5 rounded-2xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">No published destinations match your search.</div>}
