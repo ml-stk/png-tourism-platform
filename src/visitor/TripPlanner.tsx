@@ -28,12 +28,12 @@ function load<T>(key: string, fallback: T): T {
 function normalizePlaces(value: unknown): Place[] {
   if (!Array.isArray(value)) return [];
   return value.map((item: any) => ({
-    id: String(item.id),
-    name: String(item.name),
-    province: String(item.provinceCode ?? item.province ?? ''),
-    description: String(item.description ?? 'Discover a published destination from Papua New Guinea.'),
-    latitude: Number(item.latitude),
-    longitude: Number(item.longitude),
+    id: typeof item?.id === 'string' ? item.id : '',
+    name: typeof item?.name === 'string' ? item.name : '',
+    province: typeof item?.provinceCode === 'string' ? item.provinceCode : typeof item?.province === 'string' ? item.province : '',
+    description: typeof item?.description === 'string' && item.description.trim() ? item.description : 'Discover a published destination from Papua New Guinea.',
+    latitude: Number(item?.latitude),
+    longitude: Number(item?.longitude),
   })).filter(item => item.id && item.name && Number.isFinite(item.latitude) && Number.isFinite(item.longitude));
 }
 
@@ -57,8 +57,9 @@ export default function TripPlanner() {
     try {
       const response = await fetch('/api/v1/public/destinations', { headers: { Accept: 'application/json' } });
       if (!response.ok) throw new Error(`Request failed (${response.status})`);
-      const payload = await response.json() as { data?: { items?: unknown[] } | unknown[] };
-      const raw = Array.isArray(payload.data) ? payload.data : payload.data?.items;
+      const payload = await response.json() as { data?: unknown };
+      const data = payload.data;
+      const raw = Array.isArray(data) ? data : data && typeof data === 'object' && 'items' in data ? (data as { items?: unknown }).items : undefined;
       const nextPlaces = normalizePlaces(raw);
       if (!nextPlaces.length) throw new Error('No published destinations returned');
       setPlaces(nextPlaces);
