@@ -62,6 +62,9 @@ body {
 
 .png-section-title { color: var(--png-night); }
 
+/* The secondary destination action must remain legible on white cards. */
+article button + button { color: #0f172a !important; }
+
 @media (max-width: 1023px) {
   .png-content { min-height: calc(100vh - 69px); }
 }
