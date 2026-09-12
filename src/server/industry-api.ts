@@ -14,100 +14,34 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const industryRepository = new PostgresIndustryRepository(pool);
 const operatorRepository = new PostgresOperatorRepository(pool);
 const industryService = new IndustryEcosystemService({
-  getProfile: industryRepository.getProfile.bind(industryRepository),
-  saveProfile: industryRepository.saveProfile.bind(industryRepository),
-  listPublishedProfiles: industryRepository.listPublishedProfiles.bind(industryRepository),
-  getExperience: industryRepository.getExperience.bind(industryRepository),
-  saveExperience: industryRepository.saveExperience.bind(industryRepository),
-  listPublishedExperiences: industryRepository.listPublishedExperiences.bind(industryRepository),
-  createLead: industryRepository.createLead.bind(industryRepository),
-  listLeads: industryRepository.listLeads.bind(industryRepository),
-  isOperatorActive: async (operatorId) => (await operatorRepository.getById(operatorId))?.status === 'active',
+  getProfile: industryRepository.getProfile.bind(industryRepository), saveProfile: industryRepository.saveProfile.bind(industryRepository), listPublishedProfiles: industryRepository.listPublishedProfiles.bind(industryRepository), getExperience: industryRepository.getExperience.bind(industryRepository), saveExperience: industryRepository.saveExperience.bind(industryRepository), listPublishedExperiences: industryRepository.listPublishedExperiences.bind(industryRepository), createLead: industryRepository.createLead.bind(industryRepository), listLeads: industryRepository.listLeads.bind(industryRepository), isOperatorActive: async (operatorId) => (await operatorRepository.getById(operatorId))?.status === 'active',
 });
 
 export async function handleIndustryApi(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
-  const url = new URL(req.url || '/', 'http://localhost');
-  if (!url.pathname.startsWith('/api/v1/industry')) return false;
-  const requestId = req.headers['x-request-id']?.toString() || randomUUID();
-  res.setHeader('x-request-id', requestId);
-  res.setHeader('content-type', 'application/json; charset=utf-8');
-  applySecurityHeaders(res);
-  if (!enforceRateLimit(req, res)) return true;
+  const url = new URL(req.url || '/', 'http://localhost'); if (!url.pathname.startsWith('/api/v1/industry')) return false;
+  const requestId = req.headers['x-request-id']?.toString() || randomUUID(); res.setHeader('x-request-id', requestId); res.setHeader('content-type', 'application/json; charset=utf-8'); applySecurityHeaders(res); if (!enforceRateLimit(req, res)) return true;
   try {
     requestBodyLimit(req);
-    if (req.method === 'GET' && url.pathname === '/api/v1/industry/profiles') {
-      const provinceCode = parseProvince(url.searchParams.get('province'));
-      return send(res, 200, { data: await industryService.publicProfiles(provinceCode), requestId });
-    }
-    if (req.method === 'GET' && url.pathname === '/api/v1/industry/experiences') {
-      const provinceCode = parseProvince(url.searchParams.get('province'));
-      return send(res, 200, { data: await industryService.publicExperiences({ provinceCode, destinationId: url.searchParams.get('destination') || undefined }), requestId });
-    }
-    if (req.method === 'POST' && url.pathname === '/api/v1/industry/leads') {
-      const body = await readJson(req);
-      const source = body.source;
-      if (source !== 'visitor' && source !== 'qr' && source !== 'referral') throwValidation('source must be visitor, qr or referral');
-      const operatorId = requiredString(body.operatorId, 'operatorId');
-      const experienceId = typeof body.experienceId === 'string' ? body.experienceId : undefined;
-      if (experienceId) {
-        const experience = await industryRepository.getExperience(experienceId);
-        if (!experience || experience.status !== 'published' || experience.operatorId !== operatorId) throwValidation('Published experience is required');
-      }
-      const now = new Date().toISOString();
-      const lead: VisitorLead = { id: randomUUID(), operatorId, ...(experienceId ? { experienceId } : {}), source, status: 'new', ...(typeof body.visitorMessage === 'string' ? { visitorMessage: body.visitorMessage.slice(0, 4000) } : {}), createdAt: now, updatedAt: now };
-      return send(res, 201, { data: await industryService.createLead(lead), requestId });
-    }
-
-    const context = authenticate(req, requestId);
-    const profileMatch = url.pathname.match(/^\/api\/v1\/industry\/profiles\/([^/]+)$/);
-    if (profileMatch) {
-      const operatorId = decodeURIComponent(profileMatch[1]);
-      requirePermission(context, 'operator:read');
-      requireOperatorAccess(context, operatorId);
-      const operator = await operatorRepository.getById(operatorId);
-      if (!operator) return send(res, 404, { error: { code: 'NOT_FOUND', message: 'Operator not found' }, requestId });
-      requireProvinceAccess(context, operator.provinceCode);
-      if (req.method === 'GET') return send(res, 200, { data: await industryRepository.getProfile(operatorId), requestId });
-      if (req.method === 'PUT') {
-        const body = await readJson(req);
-        const publicContact = typeof body.publicContact === 'object' && body.publicContact ? body.publicContact as Record<string, unknown> : {};
-        const profile: IndustryProfile = { id: typeof body.id === 'string' ? body.id : randomUUID(), operatorId, displayName: requiredString(body.displayName, 'displayName'), description: requiredString(body.description, 'description'), provinceCode: operator.provinceCode, categories: Array.isArray(body.categories) ? body.categories.filter((v): v is string => typeof v === 'string').slice(0, 20) : [], publicContact: { website: typeof publicContact.website === 'string' ? publicContact.website : undefined, email: typeof publicContact.email === 'string' ? publicContact.email : undefined, phone: typeof publicContact.phone === 'string' ? publicContact.phone : undefined }, published: body.published === true, updatedAt: new Date().toISOString(), version: typeof body.version === 'number' ? body.version : 1 };
-        return send(res, 200, { data: await industryService.saveProfile(profile, typeof body.version === 'number' ? body.version : undefined), requestId });
-      }
-    }
-    const experienceMatch = url.pathname.match(/^\/api\/v1\/industry\/experiences\/([^/]+)$/);
-    if (experienceMatch) {
-      const id = decodeURIComponent(experienceMatch[1]);
-      const existing = await industryRepository.getExperience(id);
-      if (!existing) return send(res, 404, { error: { code: 'NOT_FOUND', message: 'Experience not found' }, requestId });
-      requirePermission(context, 'operator:read');
-      requireOperatorAccess(context, existing.operatorId);
-      const operator = await operatorRepository.getById(existing.operatorId);
-      if (!operator) return send(res, 404, { error: { code: 'NOT_FOUND', message: 'Operator not found' }, requestId });
-      requireProvinceAccess(context, operator.provinceCode);
-      if (req.method === 'GET') return send(res, 200, { data: existing, requestId });
-      if (req.method === 'PUT') {
-        const body = await readJson(req);
-        const status = body.status === 'submitted' || body.status === 'draft' || body.status === 'suspended' ? body.status : existing.status;
-        const experience: IndustryExperience = { id, operatorId: existing.operatorId, title: requiredString(body.title, 'title'), summary: requiredString(body.summary, 'summary'), destinationId: typeof body.destinationId === 'string' ? body.destinationId : undefined, provinceCode: operator.provinceCode, status, updatedAt: new Date().toISOString(), version: typeof body.version === 'number' ? body.version : existing.version };
-        return send(res, 200, { data: await industryService.saveExperience(experience, typeof body.version === 'number' ? body.version : undefined), requestId });
-      }
-    }
-    if (req.method === 'GET' && url.pathname === '/api/v1/industry/leads') {
-      requirePermission(context, 'operator:read');
-      const operatorId = requiredString(url.searchParams.get('operatorId'), 'operatorId');
-      requireOperatorAccess(context, operatorId);
-      return send(res, 200, { data: await industryService.operatorLeads(operatorId), requestId });
-    }
-    return send(res, 404, { error: { code: 'NOT_FOUND', message: 'Industry route not found' }, requestId });
-  } catch (e: any) {
-    const status = e?.code === 'UNAUTHORIZED' ? 401 : e?.code === 'FORBIDDEN' ? 403 : e?.code === 'NOT_FOUND' ? 404 : e?.code === 'VALIDATION_ERROR' ? 400 : e?.code === 'CONFLICT' ? 409 : 500;
-    return send(res, status, { error: { code: e?.code || 'INTERNAL_ERROR', message: status === 500 ? 'Internal server error' : e.message }, requestId });
-  }
+    if (req.method === 'GET' && url.pathname === '/api/v1/industry/profiles') { const provinceCode = parseProvince(url.searchParams.get('province')); return send(res,200,{data:await industryService.publicProfiles(provinceCode),requestId}); }
+    if (req.method === 'GET' && url.pathname === '/api/v1/industry/experiences') { const provinceCode=parseProvince(url.searchParams.get('province')); return send(res,200,{data:await industryService.publicExperiences({provinceCode,destinationId:url.searchParams.get('destination')||undefined}),requestId}); }
+    if (req.method === 'POST' && url.pathname === '/api/v1/industry/leads') { const body=await readJson(req); const source=body.source; if(source!=='visitor'&&source!=='qr'&&source!=='referral') throwValidation('source must be visitor, qr or referral'); const operatorId=requiredString(body.operatorId,'operatorId'); const experienceId=typeof body.experienceId==='string'?body.experienceId:undefined; if(experienceId){const experience=await industryRepository.getExperience(experienceId);if(!experience||experience.status!=='published'||experience.operatorId!==operatorId)throwValidation('Published experience is required');} const now=new Date().toISOString(); const lead:VisitorLead={id:randomUUID(),operatorId,...(experienceId?{experienceId}:{}),source,status:'new',...(typeof body.visitorMessage==='string'?{visitorMessage:body.visitorMessage.slice(0,4000)}:{}),createdAt:now,updatedAt:now}; return send(res,201,{data:await industryService.createLead(lead),requestId}); }
+    const context=authenticate(req,requestId);
+    const profileMatch=url.pathname.match(/^\/api\/v1\/industry\/profiles\/([^/]+)$/);
+    if(profileMatch){ const operatorId=decodeURIComponent(profileMatch[1]); requirePermission(context,'operator:read'); requireOperatorAccess(context,operatorId); const operator=await operatorRepository.getById(operatorId); if(!operator)return send(res,404,{error:{code:'NOT_FOUND',message:'Operator not found'},requestId}); requireProvinceAccess(context,operator.provinceCode); if(req.method==='GET')return send(res,200,{data:await industryRepository.getProfile(operatorId),requestId}); if(req.method==='PUT'){ requirePermission(context,'operator:manage_profile'); const body=await readJson(req); const existing=await industryRepository.getProfile(operatorId); const publicContact=typeof body.publicContact==='object'&&body.publicContact?body.publicContact as Record<string,unknown>:{}; const profile:IndustryProfile={id:existing?.id||randomUUID(),operatorId,displayName:requiredString(body.displayName,'displayName'),description:requiredString(body.description,'description'),provinceCode:operator.provinceCode,categories:Array.isArray(body.categories)?body.categories.filter((v):v is string=>typeof v==='string').slice(0,20):[],publicContact:{website:typeof publicContact.website==='string'?publicContact.website:undefined,email:typeof publicContact.email==='string'?publicContact.email:undefined,phone:typeof publicContact.phone==='string'?publicContact.phone:undefined},published:existing?.published===true,updatedAt:new Date().toISOString(),version:typeof body.version==='number'?body.version:(existing?.version||1)}; return send(res,200,{data:await industryService.saveProfile(profile,existing?.version),requestId}); } }
+    if(req.method==='POST'&&/^\/api\/v1\/industry\/profiles\/[^/]+\/submit$/.test(url.pathname)){ const operatorId=decodeURIComponent(url.pathname.split('/')[5]); requirePermission(context,'operator:manage_profile'); requireOperatorAccess(context,operatorId); const operator=await operatorRepository.getById(operatorId); if(!operator)return send(res,404,{error:{code:'NOT_FOUND',message:'Operator not found'},requestId}); requireProvinceAccess(context,operator.provinceCode); const existing=await industryRepository.getProfile(operatorId); if(!existing)return send(res,400,{error:{code:'VALIDATION_ERROR',message:'Profile must be saved before submission'},requestId}); const updated={...existing,published:false,updatedAt:new Date().toISOString(),version:existing.version+1}; return send(res,200,{data:await industryRepository.saveProfile(updated,existing.version),requestId}); }
+    const experienceCollection=url.pathname==='/api/v1/industry/experiences';
+    if(experienceCollection&&req.method==='POST'){ requirePermission(context,'operator:manage_profile'); const body=await readJson(req); const operatorId=requiredString(body.operatorId,'operatorId'); requireOperatorAccess(context,operatorId); const operator=await operatorRepository.getById(operatorId); if(!operator)return send(res,404,{error:{code:'NOT_FOUND',message:'Operator not found'},requestId}); requireProvinceAccess(context,operator.provinceCode); const now=new Date().toISOString(); const experience:IndustryExperience={id:randomUUID(),operatorId,title:requiredString(body.title,'title'),summary:requiredString(body.summary,'summary'),destinationId:typeof body.destinationId==='string'?body.destinationId:undefined,provinceCode:operator.provinceCode,status:'draft',updatedAt:now,version:1}; return send(res,201,{data:await industryRepository.saveExperience(experience),requestId}); }
+    const experienceMatch=url.pathname.match(/^\/api\/v1\/industry\/experiences\/([^/]+)$/);
+    if(experienceMatch){ const id=decodeURIComponent(experienceMatch[1]); const existing=await industryRepository.getExperience(id); if(!existing)return send(res,404,{error:{code:'NOT_FOUND',message:'Experience not found'},requestId}); requirePermission(context,'operator:read'); requireOperatorAccess(context,existing.operatorId); const operator=await operatorRepository.getById(existing.operatorId); if(!operator)return send(res,404,{error:{code:'NOT_FOUND',message:'Operator not found'},requestId}); requireProvinceAccess(context,operator.provinceCode); if(req.method==='GET')return send(res,200,{data:existing,requestId}); if(req.method==='PUT'){ requirePermission(context,'operator:manage_profile'); const body=await readJson(req); const status=body.status==='submitted'||body.status==='draft'||body.status==='suspended'?body.status:existing.status; if(existing.status==='published'&&status!=='suspended')throwValidation('Published experiences are governed by TPA and cannot be edited directly'); const experience:IndustryExperience={id,operatorId:existing.operatorId,title:requiredString(body.title,'title'),summary:requiredString(body.summary,'summary'),destinationId:typeof body.destinationId==='string'?body.destinationId:undefined,provinceCode:operator.provinceCode,status,updatedAt:new Date().toISOString(),version:typeof body.version==='number'?body.version:existing.version}; return send(res,200,{data:await industryService.saveExperience(experience,typeof body.version==='number'?body.version:undefined),requestId}); } }
+    const publishMatch=url.pathname.match(/^\/api\/v1\/industry\/experiences\/([^/]+)\/publish$/);
+    if(publishMatch&&req.method==='POST'){ const id=decodeURIComponent(publishMatch[1]); requirePermission(context,'operator:approve'); const existing=await industryRepository.getExperience(id); if(!existing)return send(res,404,{error:{code:'NOT_FOUND',message:'Experience not found'},requestId}); const operator=await operatorRepository.getById(existing.operatorId); if(!operator)return send(res,404,{error:{code:'NOT_FOUND',message:'Operator not found'},requestId}); requireProvinceAccess(context,operator.provinceCode); if(operator.status!=='active'||operator.complianceStatus!=='compliant')throwValidation('Operator must be active and compliant before publication'); if(existing.status!=='submitted')throwValidation('Only submitted experiences can be published'); const updated={...existing,status:'published' as const,updatedAt:new Date().toISOString(),version:existing.version+1}; return send(res,200,{data:await industryRepository.saveExperience(updated,existing.version),requestId}); }
+    if(req.method==='GET'&&url.pathname==='/api/v1/industry/leads'){ requirePermission(context,'operator:read'); const operatorId=requiredString(url.searchParams.get('operatorId'),'operatorId'); requireOperatorAccess(context,operatorId); return send(res,200,{data:await industryService.operatorLeads(operatorId),requestId}); }
+    return send(res,404,{error:{code:'NOT_FOUND',message:'Industry route not found'},requestId});
+  } catch(e:any){const status=e?.code==='UNAUTHORIZED'?401:e?.code==='FORBIDDEN'?403:e?.code==='NOT_FOUND'?404:e?.code==='VALIDATION_ERROR'?400:e?.code==='CONFLICT'?409:500;return send(res,status,{error:{code:e?.code||'INTERNAL_ERROR',message:status===500?'Internal server error':e.message},requestId});}
 }
-function parseProvince(value: unknown): ProvinceCode | undefined { if (value === undefined || value === null || value === '') return undefined; const provinces = ['NCD','CENTRAL','GULF','MILNE_BAY','ORO','MOROBE','MADANG','EAST_SEPIK','WEST_SEPIK','MANUS','NEW_IRELAND','EAST_NEW_BRITAIN','WEST_NEW_BRITAIN','BOUGAINVILLE','ENGA','EASTERN_HIGHLANDS','SIMBU','WESTERN_HIGHLANDS','SOUTHERN_HIGHLANDS','JIWAKA','HELA','WESTERN']; if (typeof value !== 'string' || !provinces.includes(value)) throwValidation('Invalid province code'); return value as ProvinceCode; }
-function authenticate(req: IncomingMessage, requestId: string) { if (process.env.NODE_ENV === 'production') return { user: authenticateBearerToken(req.headers.authorization, process.env.AUTH_JWT_SECRET || ''), requestId }; const subject = req.headers.authorization?.replace(/^Bearer\s+/i, '') || (process.env.DEV_IDENTITY_SUBJECT || 'development'); const roles = (process.env.DEV_IDENTITY_ROLES || 'platform_admin').split(',').map(r => r.trim()).filter(Boolean); return { user: { id: process.env.DEV_IDENTITY_USER_ID || '00000000-0000-0000-0000-000000000001', externalSubject: subject, email: process.env.DEV_IDENTITY_EMAIL || 'developer@pngtourism.local', displayName: 'Development User', roles: roles as any }, requestId }; }
-function requiredString(v: unknown, field: string): string { if (typeof v !== 'string' || !v.trim()) throwValidation(`${field} is required`); return v.trim(); }
-async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> { const chunks: Buffer[] = []; let size = 0; const maxBytes = Number(process.env.REQUEST_BODY_MAX_BYTES || 1_048_576); for await (const c of req) { const chunk = Buffer.from(c); size += chunk.length; if (size > maxBytes) throwValidation('Request body exceeds maximum size'); chunks.push(chunk); } try { const parsed: unknown = JSON.parse(Buffer.concat(chunks).toString('utf8')); if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error(); return parsed as Record<string, unknown>; } catch { throwValidation('Invalid JSON body'); } }
-function throwValidation(message: string): never { const e: any = new Error(message); e.code = 'VALIDATION_ERROR'; throw e; }
-function send(res: ServerResponse, status: number, body: unknown): true { res.statusCode = status; res.end(JSON.stringify(body)); return true; }
+function parseProvince(value:unknown):ProvinceCode|undefined{if(value===undefined||value===null||value==='')return undefined;const provinces=['NCD','CENTRAL','GULF','MILNE_BAY','ORO','MOROBE','MADANG','EAST_SEPIK','WEST_SEPIK','MANUS','NEW_IRELAND','EAST_NEW_BRITAIN','WEST_NEW_BRITAIN','BOUGAINVILLE','ENGA','EASTERN_HIGHLANDS','SIMBU','WESTERN_HIGHLANDS','SOUTHERN_HIGHLANDS','JIWAKA','HELA','WESTERN'];if(typeof value!=='string'||!provinces.includes(value))throwValidation('Invalid province code');return value as ProvinceCode;}
+function authenticate(req:IncomingMessage,requestId:string){if(process.env.NODE_ENV==='production')return{user:authenticateBearerToken(req.headers.authorization,process.env.AUTH_JWT_SECRET||''),requestId};const subject=req.headers.authorization?.replace(/^Bearer\s+/i,'')||(process.env.DEV_IDENTITY_SUBJECT||'development');const roles=(process.env.DEV_IDENTITY_ROLES||'platform_admin').split(',').map(r=>r.trim()).filter(Boolean);return{user:{id:process.env.DEV_IDENTITY_USER_ID||'00000000-0000-0000-0000-000000000001',externalSubject:subject,email:process.env.DEV_IDENTITY_EMAIL||'developer@pngtourism.local',displayName:'Development User',roles:roles as any},requestId};}
+function requiredString(v:unknown,field:string):string{if(typeof v!=='string'||!v.trim())throwValidation(`${field} is required`);return v.trim();}
+async function readJson(req:IncomingMessage):Promise<Record<string,unknown>>{const chunks:Buffer[]=[];let size=0;const maxBytes=Number(process.env.REQUEST_BODY_MAX_BYTES||1048576);for await(const c of req){const chunk=Buffer.from(c);size+=chunk.length;if(size>maxBytes)throwValidation('Request body exceeds maximum size');chunks.push(chunk);}try{const parsed:unknown=JSON.parse(Buffer.concat(chunks).toString('utf8'));if(!parsed||typeof parsed!=='object'||Array.isArray(parsed))throw new Error();return parsed as Record<string,unknown>;}catch{throwValidation('Invalid JSON body');}}
+function throwValidation(message:string):never{const e:any=new Error(message);e.code='VALIDATION_ERROR';throw e;}
+function send(res:ServerResponse,status:number,body:unknown):true{res.statusCode=status;res.end(JSON.stringify(body));return true;}
