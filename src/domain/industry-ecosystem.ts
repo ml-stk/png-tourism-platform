@@ -1,6 +1,7 @@
 import type { ProvinceCode } from './types';
 
 export type IndustryExperienceStatus = 'draft' | 'submitted' | 'published' | 'suspended';
+export type IndustryProfileReviewStatus = 'draft' | 'submitted' | 'published' | 'suspended';
 export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'closed' | 'declined';
 
 export interface IndustryProfile {
@@ -12,6 +13,7 @@ export interface IndustryProfile {
   categories: string[];
   publicContact?: { website?: string; email?: string; phone?: string };
   published: boolean;
+  reviewStatus: IndustryProfileReviewStatus;
   updatedAt: string;
   version: number;
 }
