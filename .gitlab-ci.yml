@@ -21,7 +21,7 @@ build:
 
 api_smoke:
   stage: smoke
-  allow_failure: true
+  allow_failure: false
   script:
     - node scripts/api-smoke.mjs
   rules:
