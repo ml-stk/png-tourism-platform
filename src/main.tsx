@@ -35,7 +35,17 @@ async function snapshotResponseForDestination(inputUrl: string): Promise<Respons
 }
 
 window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
-  const inputUrl = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+  let inputUrl = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+
+  // Normalize relative visitor API calls before deciding whether the request
+  // can use the live Render API plus the same-origin Pages snapshot fallback.
+  if (typeof input === 'string' && input.startsWith('/api/')) {
+    input = `${API_ORIGIN}${input}`;
+    inputUrl = input;
+  } else if (input instanceof URL && input.pathname.startsWith('/api/')) {
+    input = new URL(`${API_ORIGIN}${input.pathname}${input.search}`);
+    inputUrl = input.toString();
+  }
 
   // GitLab Pages is static, while the Render API can be slow or unreachable
   // from some visitor networks. Prefer the live API, but race it against the
@@ -67,11 +77,6 @@ window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
     return Promise.any([liveRequest, snapshotRequest]);
   }
 
-  if (typeof input === 'string' && input.startsWith('/api/')) {
-    input = `${API_ORIGIN}${input}`;
-  } else if (input instanceof URL && input.pathname.startsWith('/api/')) {
-    input = new URL(`${API_ORIGIN}${input.pathname}${input.search}`);
-  }
   return browserFetch(input, init);
 };
 
