@@ -5,7 +5,7 @@ import type { IndustryProfile } from '../domain/industry-ecosystem';
 const profile: IndustryProfile = {
   id: 'p1', operatorId: 'o1', displayName: 'PNG Adventures', description: 'Published tourism operator profile',
   provinceCode: 'NCD', categories: ['tour'], publicContact: { website: 'https://example.test' }, published: true,
-  updatedAt: '2026-01-01T00:00:00.000Z', version: 1,
+  reviewStatus: 'published', updatedAt: '2026-01-01T00:00:00.000Z', version: 1,
 };
 
 describe('IndustryEcosystemService', () => {
