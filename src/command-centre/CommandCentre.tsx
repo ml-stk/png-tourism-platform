@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Activity, Building2, Compass, RefreshCw, Users, type LucideIcon } from 'lucide-react';
+import OperatorReviewQueue from './OperatorReviewQueue';
 
 type ProvinceInsight = { provinceCode: string; publishedDestinations: number; activeOperators: number; compliantOperators: number; publishedExperiences: number; visitorSignals: number; engagementSignals: number };
 type Report = { generatedAt: string; period: string; snapshot: { visitors: number; publishedDestinations: number; activeOperators: number; compliantOperators: number; publishedExperiences: number; provincesRepresented: number }; engagement: { totalSignals: number; experienceViews: number; savedExperiences: number; itineraryAdds: number; qrHandoffs: number }; provinces: ProvinceInsight[]; freshness: { source: string; generatedAt: string; governed: true }[] };
@@ -27,6 +28,7 @@ export default function CommandCentre() {
   ] : [];
   return <div className="space-y-6">
     <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"><div><div className="text-xs font-semibold uppercase tracking-wider text-emerald-700">TPA Operations</div><h2 className="mt-1 text-3xl font-bold tracking-tight">Command Centre</h2><p className="mt-2 max-w-3xl text-slate-600">Governed national and provincial tourism signals from platform operations and approved visitor engagement telemetry.</p></div><div className="flex flex-wrap gap-2"><select value={period} onChange={e => setPeriod(e.target.value)} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm">{periods.map(p => <option key={p}>{p}</option>)}</select><select value={province} onChange={e => setProvince(e.target.value)} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm"><option value="">All provinces</option>{report?.provinces.map(p => <option key={p.provinceCode} value={p.provinceCode}>{p.provinceCode}</option>)}</select><button onClick={() => void load()} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold"><RefreshCw size={15}/> Refresh</button></div></div>
+    <OperatorReviewQueue />
     {error && <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>}
     {loading && <div className="rounded-2xl border border-slate-200 bg-white p-8 text-sm text-slate-500">Loading governed intelligence…</div>}
     {!loading && report && <><div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">{metricCards.map(({label,value,Icon}) => <div key={label} className="rounded-2xl border border-slate-200 bg-white p-5"><div className="flex items-center justify-between"><span className="text-sm text-slate-500">{label}</span><Icon size={18} className="text-emerald-700"/></div><div className="mt-2 text-3xl font-bold">{value}</div></div>)}</div>
