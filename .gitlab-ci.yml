@@ -31,6 +31,7 @@ pages:
   stage: deploy
   script:
     - npm install
+    - node scripts/sync-public-destinations.mjs
     - npm run build
     - mkdir -p public-pages
     - cp -r dist/. public-pages/
