@@ -65,8 +65,8 @@ body {
 /* The secondary destination action must remain legible on white cards. */
 article button + button { color: #0f172a !important; }
 
-/* Premium visitor cards: use the governed destination hero set without changing the API contract. */
-.png-content article:has(button + button) {
+/* Destination hero cards are rendered inside the public visitor page, not .png-content. */
+article:has(button + button) {
   position: relative;
   overflow: hidden;
   padding-top: 158px;
@@ -78,12 +78,12 @@ article button + button { color: #0f172a !important; }
   transition: transform .18s ease, box-shadow .18s ease;
 }
 
-.png-content article:has(button + button):hover {
+article:has(button + button):hover {
   transform: translateY(-2px);
   box-shadow: 0 18px 38px rgba(7,27,42,.14);
 }
 
-.png-content article:has(button + button)::before {
+article:has(button + button)::before {
   content: '';
   position: absolute;
   inset: 0 0 auto;
@@ -93,11 +93,11 @@ article button + button { color: #0f172a !important; }
 }
 
 /* The published destination projection is ordered by destination name. */
-.png-content article:has(button + button):nth-child(1) { background-image: url('https://commons.wikimedia.org/wiki/Special:FilePath/OwenStanleyRangeOwersCornerView.jpg'); }
-.png-content article:has(button + button):nth-child(2) { background-image: url('https://www.divediscovery.com/images/kenu_kundu_festival_4.jpg'); }
-.png-content article:has(button + button):nth-child(3) { background-image: url('https://img.rezdy.com/PRODUCT_IMAGE/13699/national-mask-festival-rabaul-papua-new-guinea.jpg'); }
-.png-content article:has(button + button):nth-child(4) { background-image: url('https://papuanewguinea.travel/wp-content/uploads/2026/01/Life-along-the-Sepik-River-at-dusk-1-768x576.jpg'); }
-.png-content article:has(button + button):nth-child(5) { background-image: url('https://peakvisor.com/photo/SD/Papua-New-Guinea-mount-hagen-august-1463442698.jpg'); }
+article:has(button + button):nth-child(1) { background-image: url('https://commons.wikimedia.org/wiki/Special:FilePath/OwenStanleyRangeOwersCornerView.jpg'); }
+article:has(button + button):nth-child(2) { background-image: url('https://www.divediscovery.com/images/kenu_kundu_festival_4.jpg'); }
+article:has(button + button):nth-child(3) { background-image: url('https://img.rezdy.com/PRODUCT_IMAGE/13699/national-mask-festival-rabaul-papua-new-guinea.jpg'); }
+article:has(button + button):nth-child(4) { background-image: url('https://papuanewguinea.travel/wp-content/uploads/2026/01/Life-along-the-Sepik-River-at-dusk-1-768x576.jpg'); }
+article:has(button + button):nth-child(5) { background-image: url('https://peakvisor.com/photo/SD/Papua-New-Guinea-mount-hagen-august-1463442698.jpg'); }
 
 @media (max-width: 1023px) {
   .png-content { min-height: calc(100vh - 69px); }
