@@ -14,4 +14,4 @@ describe('visitor brand interface contract', () => {
     expect(source).toContain('<DigitalPassport/>');
     expect(passportSource).toContain('Digital Tourism Passport');
   });
-});
+} );
