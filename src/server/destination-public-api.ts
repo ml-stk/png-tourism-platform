@@ -5,7 +5,9 @@ import { PostgresDestinationProjectionRepository } from '../persistence/destinat
 import { applySecurityHeaders, enforceRateLimit } from './security';
 import type { ProvinceCode } from '../domain/types';
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+// Fail fast on database connectivity problems so an unavailable Supabase connection
+// cannot leave the public destination request hanging until the browser times out.
+const pool = new Pool({ connectionString: process.env.DATABASE_URL, connectionTimeoutMillis: 8000, query_timeout: 15000, statement_timeout: 15000 });
 const service = new DestinationProjectionService(new PostgresDestinationProjectionRepository(pool));
 
 export async function handleDestinationPublicApi(req: IncomingMessage, res: ServerResponse): Promise<boolean> {

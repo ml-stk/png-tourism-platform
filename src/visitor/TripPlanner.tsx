@@ -43,7 +43,9 @@ export default function TripPlanner() {
   const loadPublishedData = async () => {
     setLoading(true); setError('');
     try {
-      const response = await fetchWithTimeout('/api/v1/public/destinations', { headers: { Accept: 'application/json' } }, 20000);
+      // Render free web services can take about a minute to wake from idle. Give
+      // the authoritative destination request enough time to survive that cold start.
+      const response = await fetchWithTimeout('/api/v1/public/destinations', { headers: { Accept: 'application/json' } }, 75000);
       if (!response.ok) throw new Error(`Destination request failed (${response.status})`);
       const payload = await response.json() as { data?: { items?: unknown[] } | unknown[] };
       const raw = Array.isArray(payload.data) ? payload.data : payload.data?.items;
