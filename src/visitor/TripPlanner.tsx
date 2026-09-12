@@ -9,6 +9,13 @@ const API_ORIGIN = 'https://png-tourism-platform-api.onrender.com';
 const itineraryKey = 'png-tourism:visitor-itinerary:v3';
 const experienceItineraryKey = 'png-tourism:visitor-experience-itinerary:v1';
 const passportKey = 'png-tourism:visitor-passport:v2';
+const destinationDisplay: Record<string, { name: string; province: string }> = {
+  ORO: { name: 'Kokoda Track', province: 'Oro Province' },
+  MILNE_BAY: { name: 'Milne Bay', province: 'Milne Bay Province' },
+  EAST_NEW_BRITAIN: { name: 'Rabaul', province: 'East New Britain Province' },
+  EAST_SEPIK: { name: 'Sepik River', province: 'East Sepik Province' },
+  WESTERN_HIGHLANDS: { name: 'Western Highlands', province: 'Western Highlands' },
+};
 const fallbackPlaces: Place[] = [
   { id: '6cd519a1-8187-466e-a92d-9d6973689300', name: 'Kokoda Track', province: 'Oro Province', description: 'Walk in history. Experience the spirit of resilience.', latitude: -9.058, longitude: 147.735 },
   { id: '60bfb94e-1eaa-41e9-95ab-f286acd95d41', name: 'Milne Bay', province: 'Milne Bay Province', description: 'World-class diving in the Heart of the Pacific.', latitude: -10.316, longitude: 150.457 },
@@ -19,7 +26,18 @@ const fallbackPlaces: Place[] = [
 function load<T>(key: string, fallback: T): T { try { const value = localStorage.getItem(key); return value ? JSON.parse(value) as T : fallback; } catch { return fallback; } }
 function normalizePlaces(value: unknown): Place[] {
   if (!Array.isArray(value)) return [];
-  return value.map((item: any) => ({ id: String(item.id), name: String(item.name), province: String(item.provinceCode ?? item.province ?? ''), description: String(item.description ?? 'Discover a published destination from Papua New Guinea.'), latitude: Number(item.latitude), longitude: Number(item.longitude) })).filter(item => item.id && item.name && Number.isFinite(item.latitude) && Number.isFinite(item.longitude));
+  return value.map((item: any) => {
+    const provinceCode = String(item.provinceCode ?? '').trim();
+    const display = destinationDisplay[provinceCode];
+    return {
+      id: String(item.id),
+      name: display?.name ?? String(item.name),
+      province: display?.province ?? String(item.province ?? provinceCode),
+      description: String(item.description ?? 'Discover a published destination from Papua New Guinea.'),
+      latitude: Number(item.latitude),
+      longitude: Number(item.longitude),
+    };
+  }).filter(item => item.id && item.name && Number.isFinite(item.latitude) && Number.isFinite(item.longitude));
 }
 async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {}, timeoutMs = 7000) { const controller = new AbortController(); const timer = window.setTimeout(() => controller.abort(), timeoutMs); try { return await fetch(input, { ...init, signal: controller.signal }); } finally { window.clearTimeout(timer); } }
 
