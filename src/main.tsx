@@ -7,16 +7,39 @@ import './design-system.css';
 const API_ORIGIN = 'https://png-tourism-platform-api.onrender.com';
 const DESTINATION_API = `${API_ORIGIN}/api/v1/public/destinations`;
 const DESTINATION_SNAPSHOT = '/destinations-live.json';
+const DESTINATION_DETAIL_PREFIX = `${DESTINATION_API}/`;
 
 const browserFetch = window.fetch.bind(window);
+
+async function snapshotResponseForDestination(inputUrl: string): Promise<Response> {
+  const response = await browserFetch(DESTINATION_SNAPSHOT, { cache: 'no-store', headers: { Accept: 'application/json' } });
+  if (!response.ok) throw new Error(`Published destination snapshot returned HTTP ${response.status}`);
+  const snapshot = await response.json();
+  const destinationId = decodeURIComponent(inputUrl.slice(DESTINATION_DETAIL_PREFIX.length));
+  const items = Array.isArray(snapshot?.data?.items) ? snapshot.data.items : Array.isArray(snapshot?.data) ? snapshot.data : [];
+  const item = items.find((candidate: any) => String(candidate?.id) === destinationId);
+  if (!item) throw new Error('Destination is not present in the published snapshot');
+
+  return new Response(JSON.stringify({
+    data: {
+      ...item,
+      slug: item.slug ?? String(item.name ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+      contentVersion: Number(item.contentVersion ?? 1),
+      updatedAt: item.updatedAt ?? new Date().toISOString(),
+      freshness: item.freshness ?? 'stale',
+      media: Array.isArray(item.media) ? item.media : [],
+      qrPath: item.qrPath ?? `/destination/${item.id}`,
+      offlineCacheKey: item.offlineCacheKey ?? `destination:${item.id}:v1`,
+    },
+  }), { status: 200, headers: { 'content-type': 'application/json' } });
+}
+
 window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
   const inputUrl = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
 
   // GitLab Pages is static, while the Render API can be slow or unreachable
-  // from some visitor networks. Prefer the live API, but after a short grace
-  // period race it against the same-origin published snapshot. This prevents
-  // the visitor experience from sitting on a 75-second timeout while still
-  // using live data whenever the browser can reach the API promptly.
+  // from some visitor networks. Prefer the live API, but race it against the
+  // same-origin published snapshot for both destination lists and detail pages.
   if (inputUrl === DESTINATION_API) {
     const liveRequest = browserFetch(input, init).then((response) => {
       if (!response.ok) throw new Error(`Live destination API returned HTTP ${response.status}`);
@@ -29,6 +52,17 @@ window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
           resolve(response);
         }).catch(reject);
       }, 2500);
+    });
+    return Promise.any([liveRequest, snapshotRequest]);
+  }
+
+  if (inputUrl.startsWith(DESTINATION_DETAIL_PREFIX)) {
+    const liveRequest = browserFetch(input, init).then((response) => {
+      if (!response.ok) throw new Error(`Live destination detail API returned HTTP ${response.status}`);
+      return response;
+    });
+    const snapshotRequest = new Promise<Response>((resolve, reject) => {
+      window.setTimeout(() => snapshotResponseForDestination(inputUrl).then(resolve).catch(reject), 2500);
     });
     return Promise.any([liveRequest, snapshotRequest]);
   }
