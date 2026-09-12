@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowDown, ArrowUp, CheckCircle2, Compass, Link2, MapPin, Navigation, Plus, RefreshCw, RotateCcw, Search, Trash2, WifiOff } from 'lucide-react';
 
-type Place = { id: string; name: string; province: string; description: string; latitude: number; longitude: number };
+type Place = { id: string; name: string; province: string; description: string; latitude: number; longitude: number; heroUrl: string };
 type Experience = { id: string; operatorId: string; title: string; summary: string; provinceCode: string; status: 'published' };
 type VisitState = { visitedAt: string; verified: boolean };
 
@@ -16,12 +16,19 @@ const destinationDisplay: Record<string, { name: string; province: string }> = {
   EAST_SEPIK: { name: 'Sepik River', province: 'East Sepik Province' },
   WESTERN_HIGHLANDS: { name: 'Western Highlands', province: 'Western Highlands' },
 };
+const destinationHeroImages: Record<string, string> = {
+  'Kokoda Track': 'https://commons.wikimedia.org/wiki/Special:FilePath/OwenStanleyRangeOwersCornerView.jpg',
+  'Milne Bay': 'https://www.divediscovery.com/images/kenu_kundu_festival_4.jpg',
+  Rabaul: 'https://img.rezdy.com/PRODUCT_IMAGE/13699/national-mask-festival-rabaul-papua-new-guinea.jpg',
+  'Sepik River': 'https://papuanewguinea.travel/wp-content/uploads/2026/01/Life-along-the-Sepik-River-at-dusk-1-768x576.jpg',
+  'Western Highlands': 'https://peakvisor.com/photo/SD/Papua-New-Guinea-mount-hagen-august-1463442698.jpg',
+};
 const fallbackPlaces: Place[] = [
-  { id: '6cd519a1-8187-466e-a92d-9d6973689300', name: 'Kokoda Track', province: 'Oro Province', description: 'Walk in history. Experience the spirit of resilience.', latitude: -9.058, longitude: 147.735 },
-  { id: '60bfb94e-1eaa-41e9-95ab-f286acd95d41', name: 'Milne Bay', province: 'Milne Bay Province', description: 'World-class diving in the Heart of the Pacific.', latitude: -10.316, longitude: 150.457 },
-  { id: 'b3f878f9-d5fa-4296-92e0-caa830a62841', name: 'Rabaul', province: 'East New Britain Province', description: 'History, culture and natural wonders.', latitude: -4.198, longitude: 152.172 },
-  { id: '189d9d60-03ca-4055-8612-72d40ca42468', name: 'Sepik River', province: 'East Sepik Province', description: 'Ancient cultures. Living traditions.', latitude: -4.2, longitude: 143.5 },
-  { id: 'c23262f7-03ca-431e-b61d-d91eebc1bcb9', name: 'Western Highlands', province: 'Western Highlands', description: 'Spectacular landscapes. Unique wildlife.', latitude: -5.857, longitude: 144.229 },
+  { id: '6cd519a1-8187-466e-a92d-9d6973689300', name: 'Kokoda Track', province: 'Oro Province', description: 'Walk in history. Experience the spirit of resilience.', latitude: -9.058, longitude: 147.735, heroUrl: destinationHeroImages['Kokoda Track'] },
+  { id: '60bfb94e-1eaa-41e9-95ab-f286acd95d41', name: 'Milne Bay', province: 'Milne Bay Province', description: 'World-class diving in the Heart of the Pacific.', latitude: -10.316, longitude: 150.457, heroUrl: destinationHeroImages['Milne Bay'] },
+  { id: 'b3f878f9-d5fa-4296-92e0-caa830a62841', name: 'Rabaul', province: 'East New Britain Province', description: 'History, culture and natural wonders.', latitude: -4.198, longitude: 152.172, heroUrl: destinationHeroImages.Rabaul },
+  { id: '189d9d60-03ca-4055-8612-72d40ca42468', name: 'Sepik River', province: 'East Sepik Province', description: 'Ancient cultures. Living traditions.', latitude: -4.2, longitude: 143.5, heroUrl: destinationHeroImages['Sepik River'] },
+  { id: 'c23262f7-03ca-431e-b61d-d91eebc1bcb9', name: 'Western Highlands', province: 'Western Highlands', description: 'Spectacular landscapes. Unique wildlife.', latitude: -5.857, longitude: 144.229, heroUrl: destinationHeroImages['Western Highlands'] },
 ];
 function load<T>(key: string, fallback: T): T { try { const value = localStorage.getItem(key); return value ? JSON.parse(value) as T : fallback; } catch { return fallback; } }
 function normalizePlaces(value: unknown): Place[] {
@@ -29,13 +36,15 @@ function normalizePlaces(value: unknown): Place[] {
   return value.map((item: any) => {
     const provinceCode = String(item.provinceCode ?? '').trim();
     const display = destinationDisplay[provinceCode];
+    const name = display?.name ?? String(item.name);
     return {
       id: String(item.id),
-      name: display?.name ?? String(item.name),
+      name,
       province: display?.province ?? String(item.province ?? provinceCode),
       description: String(item.description ?? 'Discover a published destination from Papua New Guinea.'),
       latitude: Number(item.latitude),
       longitude: Number(item.longitude),
+      heroUrl: String(item.media?.[0]?.publicUrl ?? item.heroUrl ?? destinationHeroImages[name] ?? ''),
     };
   }).filter(item => item.id && item.name && Number.isFinite(item.latitude) && Number.isFinite(item.longitude));
 }
@@ -138,7 +147,7 @@ export default function TripPlanner() {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><h3 className="text-xl font-bold">Discover destinations</h3><p className="mt-1 text-sm text-slate-500">Live published visitor projection, with governed offline fallback.</p></div><span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold">{filtered.length} available</span></div>
           <div className="mt-5 grid gap-3 sm:grid-cols-[1fr_auto]"><label className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2"><Search size={16} className="text-slate-400"/><input aria-label="Search destinations" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search destinations" className="w-full bg-transparent text-sm outline-none"/></label><select aria-label="Filter province" value={province} onChange={event => setProvince(event.target.value)} className="rounded-xl border border-slate-200 px-3 py-2 text-sm">{provinces.map(item => <option key={item}>{item}</option>)}</select></div>
           <div className="mt-5 grid gap-4 md:grid-cols-2">
-            {filtered.map(place => <article key={place.id} className="rounded-2xl border border-slate-200 p-5"><div className="flex items-start justify-between gap-3"><div><h4 className="font-bold">{place.name}</h4><div className="mt-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{place.province}</div></div><MapPin size={18} className="text-emerald-700"/></div><p className="mt-3 text-sm leading-6 text-slate-600">{place.description}</p><div className="mt-4 flex flex-wrap gap-2"><button onClick={() => add(place)} className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white"><Plus size={15}/> Add to trip</button><button onClick={() => createHandoff(place.id)} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold"><Link2 size={15}/> QR handoff</button></div></article>)}
+            {filtered.map(place => <article key={place.id} className="rounded-2xl border border-slate-200 p-5"><div className="flex items-start justify-between gap-3"><div><h4 className="font-bold">{place.name}</h4><div className="mt-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{place.province}</div></div><MapPin size={18} className="text-emerald-700"/></div>{place.heroUrl && <img src={place.heroUrl} alt={`${place.name} destination`} loading="lazy" className="mt-4 h-36 w-full rounded-xl object-cover" onError={event => { event.currentTarget.style.display = 'none'; }} />}<p className="mt-3 text-sm leading-6 text-slate-600">{place.description}</p><div className="mt-4 flex flex-wrap gap-2"><button onClick={() => add(place)} className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white"><Plus size={15}/> Add to trip</button><button onClick={() => createHandoff(place.id)} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold"><Link2 size={15}/> QR handoff</button></div></article>)}
           </div>
           {loading && <div className="mt-4 text-center text-xs text-slate-400">Refreshing published destination data…</div>}
           {filtered.length === 0 && !loading && <div className="mt-5 rounded-2xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">No published destinations match your search.</div>}
