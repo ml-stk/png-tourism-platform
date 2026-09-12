@@ -45,26 +45,44 @@ export default function TripPlanner() {
 
   const loadPublishedData = async () => {
     setLoading(true);
+    setError('');
     try {
-      const [destinationResponse, experienceResponse] = await Promise.all([
-        fetchWithTimeout('/api/v1/public/destinations', { headers: { Accept: 'application/json' } }),
-        fetchWithTimeout('/api/v1/industry/experiences', { headers: { Accept: 'application/json' } }),
-      ]);
+      // The Render API can take several seconds to wake from an idle state. The
+      // destination projection is the critical visitor path, so give it a
+      // longer window and do not let the optional experiences request block it.
+      const destinationResponse = await fetchWithTimeout(
+        '/api/v1/public/destinations',
+        { headers: { Accept: 'application/json' } },
+        20000,
+      );
       if (!destinationResponse.ok) throw new Error(`Destination request failed (${destinationResponse.status})`);
       const destinationPayload = await destinationResponse.json() as { data?: { items?: unknown[] } | unknown[] };
       const rawDestinations = Array.isArray(destinationPayload.data) ? destinationPayload.data : destinationPayload.data?.items;
       const nextPlaces = normalizePlaces(rawDestinations);
       if (!nextPlaces.length) throw new Error('No published destinations returned');
       setPlaces(nextPlaces);
-      if (experienceResponse.ok) {
-        const experiencePayload = await experienceResponse.json() as { data?: unknown };
-        if (Array.isArray(experiencePayload.data)) setExperiences((experiencePayload.data as Experience[]).filter(item => item.status === 'published'));
-      }
-      setError(''); setOffline(false);
+      setOffline(false);
       setStops(current => current.filter(stop => nextPlaces.some(place => place.id === stop.id)));
+
+      // Experiences are supplementary. A slow/unavailable experience endpoint
+      // must never make the published destination projection look offline.
+      try {
+        const experienceResponse = await fetchWithTimeout(
+          '/api/v1/industry/experiences',
+          { headers: { Accept: 'application/json' } },
+          8000,
+        );
+        if (experienceResponse.ok) {
+          const experiencePayload = await experienceResponse.json() as { data?: unknown };
+          if (Array.isArray(experiencePayload.data)) setExperiences((experiencePayload.data as Experience[]).filter(item => item.status === 'published'));
+        }
+      } catch {
+        // Keep the published destination data even if the optional experience
+        // projection is slow or unavailable.
+      }
     } catch {
       setPlaces(fallbackPlaces);
-      setError('Live tourism data is taking too long to respond. Showing the governed visitor-safe destination set.');
+      setError('Live tourism data is unavailable right now. Showing the governed visitor-safe destination set.');
     } finally { setLoading(false); }
   };
 
@@ -84,7 +102,7 @@ export default function TripPlanner() {
   const createHandoff = (id: string) => { setHandoff(`pngtourism://destination/${id}`); setNotice('QR/deep-link handoff prepared from published destination state.'); };
 
   return <div className="space-y-6">
-    <section className="rounded-3xl bg-slate-900 p-7 text-white lg:p-9"><div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between"><div className="max-w-2xl"><div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold"><Compass size={14}/> VISITOR EXPERIENCE</div><h2 className="mt-3 text-3xl font-bold tracking-tight lg:text-4xl">Plan your Papua New Guinea journey.</h2><p className="mt-3 text-slate-300">Discover published destinations, build a route and keep your journey available when connectivity drops.</p></div><div className="flex flex-wrap items-center gap-2"><div className={`inline-flex w-fit items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold ${offline ? 'bg-amber-100 text-amber-900' : 'bg-emerald-100 text-emerald-900'}`}>{offline ? <WifiOff size={14}/> : <CheckCircle2 size={14}/>} {offline ? 'Offline — local state only' : loading ? 'Refreshing live tourism data' : 'Connected — live destinations'}</div><button onClick={() => void loadPublishedData()} className="inline-flex items-center gap-2 rounded-full border border-white/15 px-3 py-2 text-xs font-semibold hover:bg-white/10"><RefreshCw size={14}/> Refresh</button></div></div></section>
+    <section className="rounded-3xl bg-slate-900 p-7 text-white lg:p-9"><div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between"><div className="max-w-2xl"><div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold"><Compass size={14}/> VISITOR EXPERIENCE</div><h2 className="mt-3 text-3xl font-bold tracking-tight lg:text-4xl">Plan your Papua New Guinea journey.</h2><p className="mt-3 text-slate-300">Discover published destinations, build a route and keep your journey available when connectivity drops.</p></div><div className="flex flex-wrap items-center gap-2"><div className={`inline-flex w-fit items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold ${offline ? 'bg-amber-100 text-amber-900' : 'bg-emerald-100 text-emerald-900'}`}>{offline ? <WifiOff size={14}/> : loading ? 'Refreshing live tourism data' : 'Connected — live destinations'}</div><button onClick={() => void loadPublishedData()} className="inline-flex items-center gap-2 rounded-full border border-white/15 px-3 py-2 text-xs font-semibold hover:bg-white/10"><RefreshCw size={14}/> Refresh</button></div></div></section>
     {notice && <div role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">{notice}</div>}
     {error && <div role="status" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">{error}</div>}
     <div className="grid gap-6 xl:grid-cols-[1.1fr_.9fr]">
