@@ -35,4 +35,5 @@ export interface QrHandoff {
   targetId: string;
   uri: string;
   expiresAt?: string;
+  verificationToken?: string;
 }

@@ -7,6 +7,7 @@ const allowedTypes = new Set<VisitorEngagementEventType>([
   'experience_added_to_itinerary',
   'destination_added_to_itinerary',
   'qr_handoff_created',
+  'destination_visit_verified',
 ]);
 
 export class VisitorEngagementService {

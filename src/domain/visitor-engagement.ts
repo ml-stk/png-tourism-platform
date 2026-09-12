@@ -3,7 +3,8 @@ export type VisitorEngagementEventType =
   | 'experience_saved'
   | 'experience_added_to_itinerary'
   | 'destination_added_to_itinerary'
-  | 'qr_handoff_created';
+  | 'qr_handoff_created'
+  | 'destination_visit_verified';
 
 export type VisitorEngagementSource = 'web' | 'mobile' | 'kiosk' | 'qr';
 

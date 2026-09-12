@@ -10,7 +10,7 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const service = new VisitorEngagementService(new PostgresVisitorEngagementRepository(pool));
 const eventTypes = new Set<VisitorEngagementEventType>([
   'experience_view', 'experience_saved', 'experience_added_to_itinerary',
-  'destination_added_to_itinerary', 'qr_handoff_created',
+  'destination_added_to_itinerary', 'qr_handoff_created', 'destination_visit_verified',
 ]);
 
 export async function handleVisitorEngagementApi(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
