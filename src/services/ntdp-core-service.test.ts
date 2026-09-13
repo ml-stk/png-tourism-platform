@@ -21,4 +21,14 @@ describe('NtdpCoreService', () => {
     query.mockResolvedValueOnce({ rows: [{ code: 'platform-ready', status: 'planned', capabilities: ['membership_fee'] }] });
     await expect(service.commerceReadiness()).resolves.toMatchObject({ transactionModel: 'commerce.transactions', credentialStorage: 'external-secret-manager', providers: [{ code: 'platform-ready' }] });
   });
+
+  it('lists governed GIS layer definitions', async () => {
+    query.mockResolvedValueOnce({ rows: [{ layer_code: 'operators', authoritative: true, geometry_type: 'Point' }] });
+    await expect(service.geoLayers()).resolves.toEqual([{ layer_code: 'operators', authoritative: true, geometry_type: 'Point' }]);
+  });
+
+  it('returns public GIS data as a GeoJSON FeatureCollection', async () => {
+    query.mockResolvedValueOnce({ rows: [{ feature: { type: 'Feature', id: 'asset-1' } }, { feature: { type: 'Feature', id: 'asset-2' } }] });
+    await expect(service.geoJsonAssets()).resolves.toEqual({ type: 'FeatureCollection', features: [{ type: 'Feature', id: 'asset-1' }, { type: 'Feature', id: 'asset-2' }] });
+  });
 });

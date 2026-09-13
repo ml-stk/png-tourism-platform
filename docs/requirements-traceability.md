@@ -1,46 +1,30 @@
 # NTDP Requirements Traceability
 
-## Source-to-platform matrix
+## Concept Note to platform baseline
 
-| Source requirement | Repository evidence | Status |
+| Concept Note module / channel | Current repository position | Remaining acceptance work |
 |---|---|---|
-| Authoritative National Tourism Registry | `db/migrations/0001_platform_foundation.sql`, operator/content services | Implemented |
-| Tourism Data Warehouse | `db/migrations/0016_ntdp_enterprise_modules.sql`, `0019_ntdp_warehouse_maturation.sql`, governed facts/snapshots, metric definitions and ETL run audit | Baseline implemented; historical BI/forecasting expansion remains |
-| Tourism GIS Platform | PostGIS `gis.tourism_geo_asset`, GIS API | Baseline implemented; authoritative layer/tooling expansion pending |
-| Tourism SME Development | SME profiles, assessments, programmes/enrolments | Baseline implemented; workflow/reporting expansion pending |
-| TIA Membership Management | `tia_memberships`, lifecycle API, membership event history | Lifecycle baseline implemented; reporting/UI remains |
-| Regulatory & Compliance | operator lifecycle + compliance + licensing/inspection/actions | Baseline implemented; certification expansion remains |
-| Marketplace & Distribution Hub | `distribution.channels`, `distribution.publications`, partner registry/bindings | Baseline implemented; syndication adapters pending |
-| Payments & Commerce Readiness | `commerce.payment_providers`, `commerce.transactions` | Readiness baseline implemented |
-| National Tourism API Gateway | versioned APIs + enterprise API boundary | Application API implemented; gateway control plane pending |
-| Website | visitor interface and public APIs | Implemented foundation |
-| Super App/PWA | PWA manifest, visitor services and responsive UI | Foundation implemented |
-| Provincial portals | province scoping + offline provincial manifest | Foundation implemented |
-| Kiosks | kiosk manifest + QR handoff | Foundation implemented |
-| Approved third parties | distribution channel + partner onboarding boundary | Foundation implemented; live partner integration pending |
-| Vision and scope documentation | `docs/vision-and-scope.md` | Complete baseline |
-| Four visual design concepts | `docs/visual-design-prototypes.md` + common design system | Complete specification; visual acceptance remains UI gate |
-| Solution architecture | `docs/solution-architecture.md` | Complete baseline |
-| System flows | `docs/system-flows.md` | Complete baseline |
-| Today vs Tomorrow | `docs/today-and-tomorrow.md` | Complete baseline |
+| National Tourism Registry | Implemented with persistent operator lifecycle, audit and compliance state | Production data governance and migration validation |
+| Tourism Data Warehouse | Baseline implemented with governed snapshots, facts, metric definitions and ETL audit | Full historical BI, forecasting and production scheduler |
+| Tourism GIS Platform | **Matured baseline**: PostGIS asset store, governed layer catalogue, registry/destination synchronisation, province filters and GeoJSON API | Boundary/polygon layers, richer GIS tooling and authoritative source-data onboarding |
+| Tourism SME Development Platform | Baseline implemented: profiles, assessments and development-program persistence | Full programme workflow, reporting and UI |
+| TIA Membership Management | Lifecycle baseline implemented: applications, activation/suspension/cancellation, renewals, expiry and event history | Production reporting/UI and actor attribution hardening |
+| Regulatory & Compliance Framework | Baseline implemented: licences, reviews, inspections and compliance actions | Certification workflow and reporting expansion |
+| Tourism Marketplace & Distribution Hub | Baseline implemented: five channels, publication queue, partner registry and channel bindings | Live syndication adapters and partner certification |
+| Tourism Payments & Commerce Readiness Framework | Baseline implemented: provider-neutral readiness and transaction model | Live provider adapters, signed webhooks and reconciliation |
+| National Tourism API Gateway | Versioned authenticated application API boundary implemented | True gateway control plane: consumer registration, keys/OAuth, quotas, policy and gateway analytics |
+| PNG Tourism Website | Foundation implemented | Production content/acceptance hardening |
+| PNG Tourism Super App | PWA/offline foundation implemented | Full app feature set and release acceptance |
+| Provincial Tourism Portals | Provincial foundation and scoped access implemented | Provincial content/workflow expansion |
+| Tourism Information Kiosks | Offline/kiosk foundation implemented | Hardware/deployment acceptance |
+| Approved Third-Party Tourism Platforms | Partner/channel foundation implemented | Live partner integrations |
 
-## Warehouse baseline
+## GIS baseline
 
-The analytical boundary now contains operator snapshots, visitor-event facts, governed daily metric definitions, daily metric facts and ETL run audit records. A controlled refresh function populates registered, active, compliant and visitor-event metrics by day and province. Enterprise APIs expose metric retrieval, refresh and ETL-run status to authorised users.
+The GIS baseline now provides a governed layer catalogue with authoritative-source metadata and a PostGIS-backed tourism asset store. Registry operators and destinations with valid coordinates can be synchronised into the GIS asset store through a controlled database function. Enterprise GIS access supports province and layer filtering, while the GeoJSON endpoint exposes only assets marked public and scoped as public.
 
-This is a production-oriented warehouse foundation, not a claim that the full national data warehouse, BI estate or predictive forecasting layer is complete. Historical retention policy, production scheduling, BI dashboards, data quality rules and forecasting remain release gates.
+The implementation intentionally does not claim the complete GIS platform: boundary polygons, comprehensive thematic layers, external authoritative geospatial datasets and advanced GIS tooling remain release work.
 
 ## MVP scope boundary
 
-The proposed MVP source explicitly states that its two-month deliverable is a design/architecture package and excludes software build and data migration. The repository has progressed beyond that design scope into implementation. This traceability document therefore distinguishes design-deliverable compliance from full Concept Note implementation compliance.
-
-## Release acceptance gates
-
-1. All automated tests pass.
-2. TypeScript/Vite production build passes.
-3. API smoke tests pass.
-4. Database migrations apply cleanly to the target production PostgreSQL/Supabase environment.
-5. Security tests pass, including authentication, RBAC and public/private boundary tests.
-6. Module acceptance tests cover Registry, Warehouse, GIS, SME, TIA, Regulatory, Distribution, Commerce and API boundaries.
-7. Four-channel UI acceptance targets are reviewed against the visual specification.
-8. Backup/restore and offline recovery tests are completed before production go-live.
+The Proposed Minimum Viable Product document describes a two-month design and architecture package rather than a production software build and excludes data migration. This repository has deliberately progressed beyond that design baseline into implementation. Production acceptance therefore remains subject to the release gates covering migration application, security, capacity, data governance, backup/recovery and channel validation.
