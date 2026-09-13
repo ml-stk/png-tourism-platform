@@ -5,8 +5,8 @@
 | Source requirement | Repository evidence | Status |
 |---|---|---|
 | Authoritative National Tourism Registry | `db/migrations/0001_platform_foundation.sql`, operator/content services | Implemented |
-| Tourism Data Warehouse | `db/migrations/0016_ntdp_enterprise_modules.sql`, `NtdpCoreService` | Baseline implemented; warehouse maturation pending |
-| Tourism GIS Platform | PostGIS `gis.tourism_geo_asset`, GIS API | Baseline implemented; layer/tooling expansion pending |
+| Tourism Data Warehouse | `db/migrations/0016_ntdp_enterprise_modules.sql`, `0019_ntdp_warehouse_maturation.sql`, governed facts/snapshots, metric definitions and ETL run audit | Baseline implemented; historical BI/forecasting expansion remains |
+| Tourism GIS Platform | PostGIS `gis.tourism_geo_asset`, GIS API | Baseline implemented; authoritative layer/tooling expansion pending |
 | Tourism SME Development | SME profiles, assessments, programmes/enrolments | Baseline implemented; workflow/reporting expansion pending |
 | TIA Membership Management | `tia_memberships`, lifecycle API, membership event history | Lifecycle baseline implemented; reporting/UI remains |
 | Regulatory & Compliance | operator lifecycle + compliance + licensing/inspection/actions | Baseline implemented; certification expansion remains |
@@ -23,6 +23,12 @@
 | Solution architecture | `docs/solution-architecture.md` | Complete baseline |
 | System flows | `docs/system-flows.md` | Complete baseline |
 | Today vs Tomorrow | `docs/today-and-tomorrow.md` | Complete baseline |
+
+## Warehouse baseline
+
+The analytical boundary now contains operator snapshots, visitor-event facts, governed daily metric definitions, daily metric facts and ETL run audit records. A controlled refresh function populates registered, active, compliant and visitor-event metrics by day and province. Enterprise APIs expose metric retrieval, refresh and ETL-run status to authorised users.
+
+This is a production-oriented warehouse foundation, not a claim that the full national data warehouse, BI estate or predictive forecasting layer is complete. Historical retention policy, production scheduling, BI dashboards, data quality rules and forecasting remain release gates.
 
 ## MVP scope boundary
 
