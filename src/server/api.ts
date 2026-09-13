@@ -49,7 +49,7 @@ async function authenticate(req:IncomingMessage,requestId:string){if(process.env
 async function hydrateProductionIdentity(tokenUser:AuthenticatedUser):Promise<AuthenticatedUser>{
   const email=tokenUser.email||`${tokenUser.externalSubject}@identity.invalid`;
   const displayName=tokenUser.displayName||tokenUser.externalSubject;
-  const result=await pool.query<{id:string,is_active:boolean}>('insert into users (external_subject,email,display_name,last_login_at) values ($1,$2,$3,now()) on conflict (external_subject) do update set email=excluded.email,display_name=excluded.displayName,last_login_at=now(),updated_at=now() returning id,is_active',[tokenUser.externalSubject,email,displayName]);
+  const result=await pool.query<{id:string,is_active:boolean}>('insert into users (external_subject,email,display_name,last_login_at) values ($1,$2,$3,now()) on conflict (external_subject) do update set email=excluded.email,display_name=excluded.display_name,last_login_at=now(),updated_at=now() returning id,is_active',[tokenUser.externalSubject,email,displayName]);
   const row=result.rows[0];
   if(!row?.is_active){const error:any=new Error('User account is disabled');error.code='UNAUTHORIZED';throw error;}
   const roles=await pool.query<{code:string}>('select distinct r.code from user_roles ur join roles r on r.id=ur.role_id where ur.user_id=$1',[row.id]);
