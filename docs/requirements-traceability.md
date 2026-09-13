@@ -8,16 +8,16 @@
 | Tourism Data Warehouse | `db/migrations/0016_ntdp_enterprise_modules.sql`, `NtdpCoreService` | Baseline implemented; warehouse maturation pending |
 | Tourism GIS Platform | PostGIS `gis.tourism_geo_asset`, GIS API | Baseline implemented; layer/tooling expansion pending |
 | Tourism SME Development | SME profiles, assessments, programmes/enrolments | Baseline implemented; workflow/reporting expansion pending |
-| TIA Membership Management | `tia_memberships`, membership API | Baseline implemented; approval/renewal UI/reporting pending |
-| Regulatory & Compliance | operator lifecycle + compliance + audit | Implemented foundation |
-| Marketplace & Distribution Hub | `distribution.channels`, `distribution.publications` | Baseline implemented; syndication adapters pending |
+| TIA Membership Management | `tia_memberships`, lifecycle API, membership event history | Lifecycle baseline implemented; reporting/UI remains |
+| Regulatory & Compliance | operator lifecycle + compliance + licensing/inspection/actions | Baseline implemented; certification expansion remains |
+| Marketplace & Distribution Hub | `distribution.channels`, `distribution.publications`, partner registry/bindings | Baseline implemented; syndication adapters pending |
 | Payments & Commerce Readiness | `commerce.payment_providers`, `commerce.transactions` | Readiness baseline implemented |
 | National Tourism API Gateway | versioned APIs + enterprise API boundary | Application API implemented; gateway control plane pending |
 | Website | visitor interface and public APIs | Implemented foundation |
 | Super App/PWA | PWA manifest, visitor services and responsive UI | Foundation implemented |
 | Provincial portals | province scoping + offline provincial manifest | Foundation implemented |
 | Kiosks | kiosk manifest + QR handoff | Foundation implemented |
-| Approved third parties | distribution channel contract reserved | Pending partner/API onboarding |
+| Approved third parties | distribution channel + partner onboarding boundary | Foundation implemented; live partner integration pending |
 | Vision and scope documentation | `docs/vision-and-scope.md` | Complete baseline |
 | Four visual design concepts | `docs/visual-design-prototypes.md` + common design system | Complete specification; visual acceptance remains UI gate |
 | Solution architecture | `docs/solution-architecture.md` | Complete baseline |
