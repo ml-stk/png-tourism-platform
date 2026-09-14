@@ -8,7 +8,13 @@ const service = vi.hoisted(() => ({
   createClient: vi.fn(), transitionClient: vi.fn(), keys: vi.fn(), issueKey: vi.fn(),
   revokeKey: vi.fn(), usage: vi.fn().mockResolvedValue([]), authenticateApiKey: vi.fn(), logRequest: vi.fn(),
 }));
-vi.mock('../services/ntdp-api-gateway-service', () => ({ NtdpApiGatewayService: vi.fn(() => service) }));
+vi.mock('../services/ntdp-api-gateway-service', () => ({
+  NtdpApiGatewayService: class {
+    constructor() {
+      return service as any;
+    }
+  },
+}));
 vi.mock('pg', () => ({ Pool: vi.fn() }));
 vi.mock('./api', () => ({ authenticate: vi.fn().mockResolvedValue({ user: { id: 'user-1' } }) }));
 vi.mock('../auth/authorization', () => ({ requirePermission: vi.fn() }));
