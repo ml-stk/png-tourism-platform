@@ -1,13 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { handleNtdpApiGatewayApi } from './ntdp-api-gateway-api';
 
 const service = vi.hoisted(() => ({
   routes: vi.fn().mockResolvedValue([]), clients: vi.fn().mockResolvedValue([]), createClient: vi.fn(),
   transitionClient: vi.fn(), keys: vi.fn().mockResolvedValue([]), issueKey: vi.fn(), revokeKey: vi.fn(),
   usage: vi.fn().mockResolvedValue([]), authenticateApiKey: vi.fn(), logRequest: vi.fn(),
 }));
-
 vi.mock('../services/ntdp-api-gateway-service', () => ({
   NtdpApiGatewayService: class {
     routes(...args: any[]) { return service.routes(...args); }
@@ -26,6 +24,8 @@ vi.mock('pg', () => ({ Pool: vi.fn() }));
 vi.mock('./api', () => ({ authenticate: vi.fn().mockResolvedValue({ user: { id: 'user-1' } }) }));
 vi.mock('../auth/authorization', () => ({ requirePermission: vi.fn() }));
 
+import { handleNtdpApiGatewayApi } from './ntdp-api-gateway-api';
+
 type MockResponse = ServerResponse & { body?: string };
 function request(method: string, path: string, headers: Record<string, string> = {}, body = ''): IncomingMessage {
   return { method, url: path, headers, [Symbol.asyncIterator]: async function* () { if (body) yield Buffer.from(body); } } as unknown as IncomingMessage;
@@ -40,14 +40,12 @@ describe('NTDP API gateway administration', () => {
     expect(res.statusCode).toBe(401);
   });
   it('rejects malformed client creation', async () => {
-    const api = await import('./api');
-    vi.mocked(api.authenticate).mockResolvedValue({ user: { id: 'user-1' } } as never);
+    const api = await import('./api'); vi.mocked(api.authenticate).mockResolvedValue({ user: { id: 'user-1' } } as never);
     const res = response(); await handleNtdpApiGatewayApi(request('POST', '/api/v1/ntdp/gateway/clients', {}, '{}'), res);
     expect(res.statusCode).toBe(400);
   });
   it('requires gateway write permission for key issuance', async () => {
-    const authz = await import('../auth/authorization');
-    vi.mocked(authz.requirePermission).mockImplementationOnce(() => { throw Object.assign(new Error('forbidden'), { code: 'FORBIDDEN' }); });
+    const authz = await import('../auth/authorization'); vi.mocked(authz.requirePermission).mockImplementationOnce(() => { throw Object.assign(new Error('forbidden'), { code: 'FORBIDDEN' }); });
     const res = response(); await handleNtdpApiGatewayApi(request('POST', '/api/v1/ntdp/gateway/keys', {}, JSON.stringify({ clientId: 'c1' })), res);
     expect(res.statusCode).toBe(403);
   });
