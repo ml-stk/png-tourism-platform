@@ -1,16 +1,24 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
-const service = vi.hoisted(() => ({ routes: vi.fn().mockResolvedValue([]), clients: vi.fn().mockResolvedValue([]), createClient: vi.fn(), transitionClient: vi.fn(), keys: vi.fn().mockResolvedValue([]), issueKey: vi.fn(), revokeKey: vi.fn(), usage: vi.fn().mockResolvedValue([]) }));
-vi.mock('../services/ntdp-api-gateway-service', () => ({ NtdpApiGatewayService: class { routes = service.routes; clients = service.clients; createClient = service.createClient; transitionClient = service.transitionClient; keys = service.keys; issueKey = service.issueKey; revokeKey = service.revokeKey; usage = service.usage; } }));
+const service = vi.hoisted(() => ({
+  routes: vi.fn().mockResolvedValue([]), clients: vi.fn().mockResolvedValue([]), createClient: vi.fn(), transitionClient: vi.fn(),
+  keys: vi.fn().mockResolvedValue([]), issueKey: vi.fn(), revokeKey: vi.fn(), usage: vi.fn().mockResolvedValue([]),
+}));
+vi.mock('../services/ntdp-api-gateway-service', () => ({
+  NtdpApiGatewayService: class {
+    routes = service.routes; clients = service.clients; createClient = service.createClient; transitionClient = service.transitionClient;
+    keys = service.keys; issueKey = service.issueKey; revokeKey = service.revokeKey; usage = service.usage;
+  },
+}));
 vi.mock('pg', () => ({ Pool: class { constructor() {} } }));
 vi.mock('./api', () => ({ authenticate: vi.fn().mockResolvedValue({ user: { id: 'user-1' } }) }));
 vi.mock('../auth/authorization', () => ({ requirePermission: vi.fn() }));
 import { handleNtdpApiGatewayApi } from './ntdp-api-gateway-api';
 
 type MockResponse = ServerResponse & { body?: string };
-const request = (method: string, path: string, headers: Record<string, string> = {}, body = ''): IncomingMessage => ({ method, url: path, headers, [Symbol.asyncIterator]: async function* () { if (body) yield Buffer.from(body); } } as unknown as IncomingMessage);
-const response = () => ({ setHeader: vi.fn(), end(this: MockResponse, value?: string) { this.body = value; }, statusCode: 0 } as unknown as MockResponse);
+function request(method: string, path: string, headers: Record<string, string> = {}, body = ''): IncomingMessage { return { method, url: path, headers, [Symbol.asyncIterator]: async function* () { if (body) yield Buffer.from(body); } } as unknown as IncomingMessage; }
+function response() { return { setHeader: vi.fn(), end(this: MockResponse, value?: string) { this.body = value; }, statusCode: 0 } as unknown as MockResponse; }
 
 describe('NTDP API gateway administration', () => {
   it('requires authentication for gateway administration', async () => { const api = await import('./api'); vi.mocked(api.authenticate).mockRejectedValueOnce(Object.assign(new Error('no auth'), { code: 'UNAUTHORIZED' })); const res = response(); await handleNtdpApiGatewayApi(request('GET', '/api/v1/ntdp/gateway/routes'), res); expect(res.statusCode).toBe(401); });
