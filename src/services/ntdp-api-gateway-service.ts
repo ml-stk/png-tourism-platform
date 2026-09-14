@@ -1,0 +1,76 @@
+import { createHash, randomBytes } from 'node:crypto';
+import type { Pool } from 'pg';
+
+export type GatewayClientStatus = 'pending'|'approved'|'suspended'|'revoked';
+export type GatewayClientType = 'internal'|'provincial'|'third_party';
+
+export class NtdpApiGatewayService {
+  constructor(private readonly pool: Pool) {}
+
+  async clients(status?: GatewayClientStatus) {
+    const result = await this.pool.query(`select id,name,organisation,contact_email,client_type,status,rate_limit_per_minute,allowed_scopes,created_at,updated_at from gateway.api_clients ${status ? 'where status=$1' : ''} order by created_at desc`, status ? [status] : []);
+    return result.rows;
+  }
+
+  async createClient(input: {name:string; organisation?:string; contactEmail?:string; clientType?:GatewayClientType; rateLimitPerMinute?:number; allowedScopes?:string[]; createdBy:string}) {
+    const result = await this.pool.query(`insert into gateway.api_clients(name,organisation,contact_email,client_type,rate_limit_per_minute,allowed_scopes,created_by) values($1,$2,$3,$4,$5,$6::jsonb,$7) returning id,name,organisation,contact_email,client_type,status,rate_limit_per_minute,allowed_scopes,created_at`, [input.name,input.organisation ?? null,input.contactEmail ?? null,input.clientType ?? 'third_party',input.rateLimitPerMinute ?? 60,JSON.stringify(input.allowedScopes ?? []),input.createdBy]);
+    return result.rows[0];
+  }
+
+  async transitionClient(id:string,status:GatewayClientStatus,changedBy:string) {
+    const result = await this.pool.query(`update gateway.api_clients set status=$2,updated_at=now() where id=$1 returning id,name,status,updated_at`, [id,status]);
+    if (!result.rowCount) this.notFound('API client not found');
+    await this.pool.query(`insert into audit_events(id,actor_id,action,entity_type,entity_id,metadata,created_at) values(gen_random_uuid(),$1,$2,$3,$4,$5::jsonb,now())`, [changedBy,'gateway.client.status_changed','api_client',id,JSON.stringify({status})]);
+    return result.rows[0];
+  }
+
+  async issueKey(input:{clientId:string; label?:string; expiresAt?:string; createdBy:string}) {
+    const key = `pngtp_${randomBytes(24).toString('base64url')}`;
+    const hash = this.hashKey(key);
+    const prefix = key.slice(0,14);
+    const client = await this.pool.query(`select id,status from gateway.api_clients where id=$1`,[input.clientId]);
+    if (!client.rowCount) this.notFound('API client not found');
+    if (client.rows[0].status !== 'approved') this.conflict('API client must be approved before issuing a key');
+    const result = await this.pool.query(`insert into gateway.api_keys(client_id,key_prefix,key_hash,label,expires_at,created_by) values($1,$2,$3,$4,$5,$6) returning id,client_id,key_prefix,label,status,expires_at,created_at`, [input.clientId,prefix,hash,input.label ?? null,input.expiresAt ?? null,input.createdBy]);
+    return { ...result.rows[0], secret:key };
+  }
+
+  async revokeKey(id:string) {
+    const result = await this.pool.query(`update gateway.api_keys set status='revoked',revoked_at=now() where id=$1 and status='active' returning id,client_id,key_prefix,status,revoked_at`,[id]);
+    if (!result.rowCount) this.notFound('API key not found or already revoked');
+    return result.rows[0];
+  }
+
+  async keys(clientId?:string) {
+    const result = await this.pool.query(`select id,client_id,key_prefix,label,status,expires_at,last_used_at,created_at,revoked_at from gateway.api_keys ${clientId ? 'where client_id=$1' : ''} order by created_at desc`, clientId ? [clientId] : []);
+    return result.rows;
+  }
+
+  async routes(status?:string) {
+    const result = await this.pool.query(`select id,route_key,method,path_pattern,description,visibility,required_scope,upstream_service,status,created_at,updated_at from gateway.routes ${status ? 'where status=$1' : ''} order by route_key`, status ? [status] : []);
+    return result.rows;
+  }
+
+  async usage(clientId?:string, limit=100) {
+    const safeLimit=Math.min(Math.max(Number(limit)||100,1),500);
+    const result=await this.pool.query(`select request_id,client_id,api_key_id,method,route_key,path,status_code,latency_ms,requested_at from gateway.request_log ${clientId ? 'where client_id=$1' : ''} order by requested_at desc limit ${safeLimit}`, clientId ? [clientId] : []);
+    return result.rows;
+  }
+
+  async authenticateApiKey(rawKey:string) {
+    const hash=this.hashKey(rawKey);
+    const result=await this.pool.query(`select k.id api_key_id,k.client_id,c.status client_status,c.rate_limit_per_minute,c.allowed_scopes,k.expires_at from gateway.api_keys k join gateway.api_clients c on c.id=k.client_id where k.key_hash=$1 and k.status='active'`,[hash]);
+    const row=result.rows[0];
+    if(!row || row.client_status!=='approved' || (row.expires_at && new Date(row.expires_at).getTime()<=Date.now())) return null;
+    await this.pool.query(`update gateway.api_keys set last_used_at=now() where id=$1`,[row.api_key_id]);
+    return row;
+  }
+
+  async logRequest(input:{requestId:string; clientId?:string; apiKeyId?:string; method:string; routeKey?:string; path:string; statusCode:number; latencyMs?:number}) {
+    await this.pool.query(`insert into gateway.request_log(request_id,client_id,api_key_id,method,route_key,path,status_code,latency_ms) values($1,$2,$3,$4,$5,$6,$7,$8)`,[input.requestId,input.clientId ?? null,input.apiKeyId ?? null,input.method,input.routeKey ?? null,input.path,input.statusCode,input.latencyMs ?? null]);
+  }
+
+  private hashKey(key:string) { return createHash('sha256').update(key).digest('hex'); }
+  private notFound(message:string):never { const e:any=new Error(message); e.code='NOT_FOUND'; throw e; }
+  private conflict(message:string):never { const e:any=new Error(message); e.code='CONFLICT'; throw e; }
+}
