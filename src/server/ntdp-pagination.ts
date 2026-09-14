@@ -55,13 +55,19 @@ export async function withNtdpPagination(
           res.setHeader('x-pagination-page', String(page));
           res.setHeader('x-pagination-page-size', String(pageSize));
           res.setHeader('x-pagination-total', String(total));
-          return originalEnd(output, undefined, callback);
+          return callback ? originalEnd(output, callback) : originalEnd(output);
         }
       } catch {
         // Preserve the original response when it is not a JSON collection.
       }
     }
-    return originalEnd(chunk, encoding, callback);
+    return encoding === undefined
+      ? callback
+        ? originalEnd(chunk, callback)
+        : originalEnd(chunk)
+      : callback
+        ? originalEnd(chunk, encoding, callback)
+        : originalEnd(chunk, encoding);
   }) as typeof res.end;
 
   await handler();
