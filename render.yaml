@@ -14,7 +14,7 @@ services:
       - key: AUTH_JWT_SECRET
         sync: false
       - key: CORS_ALLOWED_ORIGIN
-        value: https://stream-tech-knowledge.gitlab.io
+        value: https://stream-tech-knowledge.gitlab.io,https://ml-stk.github.io
       - key: REQUEST_BODY_MAX_BYTES
         value: "1048576"
       - key: RATE_LIMIT_WINDOW_MS
