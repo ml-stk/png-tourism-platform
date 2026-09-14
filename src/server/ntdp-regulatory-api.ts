@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { randomUUID } from 'node:crypto';
 import { Pool } from 'pg';
-import { requirePermission, requireOperatorAccess, requireProvinceAccess } from '../auth/authorization';
+import { requirePermission, requireProvinceAccess } from '../auth/authorization';
 import { authenticate } from './api';
 import { NtdpCoreService } from '../services/ntdp-core-service';
 
@@ -95,7 +95,6 @@ async function requireRegulatoryOperatorAccess(context: Awaited<ReturnType<typeo
   const r = await pool.query<{ id: string; province_code: string }>('select id,province_code from operators where id=$1', [operatorId]);
   if (!r.rows[0]) throw Object.assign(new Error('Operator not found'), { code: 'NOT_FOUND' });
   requireProvinceAccess(context, r.rows[0].province_code as any);
-  if (!isAuthority(context) && context.user.operatorIds?.length) requireOperatorAccess(context, operatorId);
 }
 async function requireRegulatoryLicenseAccess(context: Awaited<ReturnType<typeof authenticate>>, licenseId: string, expectedOperatorId?: string): Promise<void> {
   const r = await pool.query<{ operator_id: string }>('select operator_id from regulatory_licenses where id=$1', [licenseId]);
