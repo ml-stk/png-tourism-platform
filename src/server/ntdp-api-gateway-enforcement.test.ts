@@ -3,18 +3,21 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { handleNtdpApiGatewayApi } from './ntdp-api-gateway-api';
 
 const service = vi.hoisted(() => ({
-  routes: vi.fn().mockResolvedValue([]), clients: vi.fn().mockResolvedValue([]), createClient: vi.fn(),
-  transitionClient: vi.fn(), keys: vi.fn().mockResolvedValue([]), issueKey: vi.fn(), revokeKey: vi.fn(),
-  usage: vi.fn().mockResolvedValue([]), authenticateApiKey: vi.fn(), logRequest: vi.fn(),
+  routes: vi.fn().mockResolvedValue([]),
+  clients: vi.fn().mockResolvedValue([]),
+  createClient: vi.fn(), transitionClient: vi.fn(), keys: vi.fn().mockResolvedValue([]), issueKey: vi.fn(),
+  revokeKey: vi.fn(), usage: vi.fn().mockResolvedValue([]), authenticateApiKey: vi.fn(), logRequest: vi.fn(),
 }));
-vi.mock('../services/ntdp-api-gateway-service', () => ({
-  NtdpApiGatewayService: vi.fn(function GatewayServiceMock() {
-    this.routes = service.routes; this.clients = service.clients; this.createClient = service.createClient;
-    this.transitionClient = service.transitionClient; this.keys = service.keys; this.issueKey = service.issueKey;
-    this.revokeKey = service.revokeKey; this.usage = service.usage;
-    this.authenticateApiKey = service.authenticateApiKey; this.logRequest = service.logRequest;
-  }),
-}));
+
+vi.mock('../services/ntdp-api-gateway-service', () => {
+  class NtdpApiGatewayServiceMock {
+    routes = service.routes; clients = service.clients; createClient = service.createClient;
+    transitionClient = service.transitionClient; keys = service.keys; issueKey = service.issueKey;
+    revokeKey = service.revokeKey; usage = service.usage;
+    authenticateApiKey = service.authenticateApiKey; logRequest = service.logRequest;
+  }
+  return { NtdpApiGatewayService: NtdpApiGatewayServiceMock };
+});
 vi.mock('pg', () => ({ Pool: vi.fn() }));
 vi.mock('./api', () => ({ authenticate: vi.fn().mockResolvedValue({ user: { id: 'user-1' } }) }));
 vi.mock('../auth/authorization', () => ({ requirePermission: vi.fn() }));
