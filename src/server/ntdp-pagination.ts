@@ -55,8 +55,7 @@ export async function withNtdpPagination(
           res.setHeader('x-pagination-page', String(page));
           res.setHeader('x-pagination-page-size', String(pageSize));
           res.setHeader('x-pagination-total', String(total));
-          if (callback) return originalEnd(output, callback);
-          return originalEnd(output);
+          return callback ? originalEnd(output, callback) : originalEnd(output);
         }
       } catch {
         // Preserve the original response when it is not a JSON collection.
