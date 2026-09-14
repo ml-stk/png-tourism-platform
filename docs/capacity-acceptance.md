@@ -1,50 +1,19 @@
-# NTDP Capacity Acceptance Gate
+# NTDP Capacity Acceptance
 
 ## Baseline
 
-The NTDP Concept Note establishes an initial capacity baseline of up to **5,000 tourism operators** and approximately **50 Authority staff users**. This gate validates engineering readiness against that baseline; it does not replace production load testing.
+The Concept Note establishes an initial capacity baseline of up to 5,000 tourism operators and approximately 50 Authority staff users.
 
-## Current implementation evidence
+## API response pagination
 
-- PostgreSQL persistence is used for the NTDP enterprise modules.
-- The analytics warehouse has snapshot, visitor-event, daily-metric, metric-definition and ETL-run structures.
-- GIS uses PostGIS-backed assets with spatial indexing and governed layer filtering.
-- The API gateway provides client/key control, scopes, per-client rate limits and request logging.
-- The current CI pipeline provides build, API smoke and test validation.
-- Common administrative list paths have been given supporting indexes in migration `0030_ntdp_capacity_indexes.sql`.
+High-growth enterprise list endpoints support bounded HTTP response pagination with `page` and `pageSize` query parameters. The default page size is 50 and the maximum is 100.
 
-## Capacity risks identified by code review
+This control bounds response payload size. It does not by itself prove database/query-level scalability; production acceptance still requires measured load testing and query-level pagination or equivalent database-side limits where required.
 
-The current enterprise service still contains several list/read paths without explicit API pagination, including daily metrics, GIS assets, TIA memberships, regulatory licences/inspections/actions and distribution/partner data. At the 5,000-operator baseline these paths may remain operational but can produce unnecessarily large response payloads and database result sets as historical data accumulates.
+## Acceptance evidence required
 
-The capacity gate therefore remains **PARTIALLY VALIDATED** until representative load testing demonstrates acceptable latency, error rate, database utilisation and connection-pool behaviour.
-
-## Required performance test profile
-
-Test at minimum:
-
-1. 5,000 operator records distributed across PNG provinces.
-2. 50 concurrent authenticated staff users performing representative registry, compliance, membership, GIS and analytics reads.
-3. Public visitor traffic against destination/content/manifest/QR paths concurrently with staff activity.
-4. Approved-partner traffic through the API gateway with authentication, scope checks, rate limiting and request logging enabled.
-5. Write activity representative of registration, compliance, membership and commerce transactions.
-6. Sustained and burst phases sufficient to expose connection-pool, query-plan and payload-growth issues.
-
-## Acceptance evidence
-
-Capture:
-
-- p50/p95/p99 latency by endpoint class
-- HTTP error rate and timeout rate
-- database CPU/memory/connection utilisation
-- connection-pool saturation
-- slow-query evidence and query plans for critical paths
-- API gateway rate-limit behaviour
-- payload sizes for list/read endpoints
-- recovery behaviour after load is removed
-
-## Release decision
-
-**Current status: PARTIALLY VALIDATED / EXTERNAL LOAD TEST REQUIRED.**
-
-The repository and database changes improve structural readiness, but no claim of passing the 5,000-operator performance target should be made until an executed load test produces measured evidence. Pagination of high-growth administrative list APIs should be treated as a priority before production scale-up.
+1. CI build and automated tests pass.
+2. Pagination contract tests pass.
+3. Representative load test at the 5,000-operator / 50-staff baseline is executed against the deployed environment.
+4. Database latency, connection pool utilisation, error rate and API response latency are recorded.
+5. No material regression is observed on public visitor APIs, registry workflows or enterprise workflows.
