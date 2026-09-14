@@ -1,16 +1,16 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
+vi.mock('pg', () => ({ Pool: vi.fn() }));
+vi.mock('./api', () => ({ authenticate: vi.fn().mockResolvedValue({ user: { id: 'user-1' } }) }));
+vi.mock('../auth/authorization', () => ({ requirePermission: vi.fn() }));
+
 const service = vi.hoisted(() => ({
   routes: vi.fn().mockResolvedValue([]), clients: vi.fn().mockResolvedValue([]), createClient: vi.fn(), transitionClient: vi.fn(),
   keys: vi.fn().mockResolvedValue([]), issueKey: vi.fn(), revokeKey: vi.fn(), usage: vi.fn().mockResolvedValue([]),
 }));
-vi.mock('../services/ntdp-api-gateway-service', () => ({
-  NtdpApiGatewayService: class { routes = service.routes; clients = service.clients; createClient = service.createClient; transitionClient = service.transitionClient; keys = service.keys; issueKey = service.issueKey; revokeKey = service.revokeKey; usage = service.usage; },
-}));
-vi.mock('pg', () => ({ Pool: vi.fn() }));
-vi.mock('./api', () => ({ authenticate: vi.fn().mockResolvedValue({ user: { id: 'user-1' } }) }));
-vi.mock('../auth/authorization', () => ({ requirePermission: vi.fn() }));
+vi.mock('../services/ntdp-api-gateway-service', () => ({ NtdpApiGatewayService: class { routes = service.routes; clients = service.clients; createClient = service.createClient; transitionClient = service.transitionClient; keys = service.keys; issueKey = service.issueKey; revokeKey = service.revokeKey; usage = service.usage; } }));
+
 import { handleNtdpApiGatewayApi } from './ntdp-api-gateway-api';
 
 type MockResponse = ServerResponse & { body?: string };
