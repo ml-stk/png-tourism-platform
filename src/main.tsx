@@ -6,7 +6,7 @@ import './design-system.css';
 
 const API_ORIGIN = 'https://png-tourism-platform-api.onrender.com';
 const DESTINATION_API = `${API_ORIGIN}/api/v1/public/destinations`;
-const DESTINATION_SNAPSHOT = '/destinations-live.json';
+const DESTINATION_SNAPSHOT = './destinations-live.json';
 const DESTINATION_DETAIL_PREFIX = `${DESTINATION_API}/`;
 
 const browserFetch = window.fetch.bind(window);
@@ -47,9 +47,10 @@ window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
     inputUrl = input.toString();
   }
 
-  // GitLab Pages is static, while the Render API can be slow or unreachable
-  // from some visitor networks. Prefer the live API, but race it against the
-  // same-origin published snapshot for both destination lists and detail pages.
+  // GitHub Pages is deployed below a repository path, so the published
+  // destination snapshot must remain relative to the current Pages base.
+  // Prefer the live API, but race it against the same-origin snapshot for both
+  // destination lists and detail pages.
   if (inputUrl === DESTINATION_API) {
     const liveRequest = browserFetch(input, init).then((response) => {
       if (!response.ok) throw new Error(`Live destination API returned HTTP ${response.status}`);
