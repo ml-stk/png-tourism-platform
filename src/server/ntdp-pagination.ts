@@ -30,12 +30,13 @@ export async function withNtdpPagination(
 
   const page = boundedInteger(parsed.searchParams.get('page'), 1, 1, 100000);
   const pageSize = boundedInteger(parsed.searchParams.get('pageSize'), 50, 1, 100);
-  const chunks: Buffer[] = [];
   const originalEnd = res.end.bind(res);
 
   res.end = ((chunk?: any, encoding?: any, callback?: any) => {
     if (res.statusCode >= 200 && res.statusCode < 300 && chunk !== undefined) {
-      const raw = Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk), encoding);
+      const raw = Buffer.isBuffer(chunk)
+        ? chunk
+        : Buffer.from(String(chunk), encoding ?? 'utf8');
       try {
         const body = JSON.parse(raw.toString('utf8')) as Record<string, unknown>;
         if (Array.isArray(body.data)) {
@@ -61,7 +62,6 @@ export async function withNtdpPagination(
       } catch {
         // Preserve the original response when it is not a JSON collection.
       }
-      chunks.push(raw);
     }
     return originalEnd(chunk, encoding, callback);
   }) as typeof res.end;
