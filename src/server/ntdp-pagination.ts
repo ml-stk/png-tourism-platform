@@ -34,9 +34,7 @@ export async function withNtdpPagination(
 
   res.end = ((chunk?: any, encoding?: any, callback?: any) => {
     if (res.statusCode >= 200 && res.statusCode < 300 && chunk !== undefined) {
-      const raw = Buffer.isBuffer(chunk)
-        ? chunk
-        : Buffer.from(String(chunk), encoding ?? 'utf8');
+      const raw = Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk), encoding ?? 'utf8');
       try {
         const body = JSON.parse(raw.toString('utf8')) as Record<string, unknown>;
         if (Array.isArray(body.data)) {
