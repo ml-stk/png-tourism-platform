@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Pool } from 'pg';
 import { requirePermission } from '../auth/authorization';
@@ -10,7 +11,7 @@ const service=new NtdpApiGatewayService(pool);
 export async function handleNtdpApiGatewayApi(req:IncomingMessage,res:ServerResponse):Promise<boolean>{
   const url=new URL(req.url||'/','http://localhost');
   if(!url.pathname.startsWith('/api/v1/ntdp/gateway'))return false;
-  const requestId=req.headers['x-request-id']?.toString()||crypto.randomUUID();
+  const requestId=req.headers['x-request-id']?.toString()||randomUUID();
   try{
     const context=await authenticate(req,requestId);
     if(req.method==='GET'&&url.pathname==='/api/v1/ntdp/gateway/routes'){requirePermission(context,'gateway:read');return send(res,200,{data:await service.routes(url.searchParams.get('status')||undefined),requestId});}
