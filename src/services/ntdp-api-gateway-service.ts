@@ -18,6 +18,19 @@ export class NtdpApiGatewayService {
   async logRequest(input:{requestId:string;clientId?:string;apiKeyId?:string;method:string;routeKey?:string;path:string;statusCode:number;latencyMs?:number}) { await this.pool.query(`insert into gateway.request_log(request_id,client_id,api_key_id,method,route_key,path,status_code,latency_ms) values($1,$2,$3,$4,$5,$6,$7,$8)`,[input.requestId,input.clientId??null,input.apiKeyId??null,input.method,input.routeKey??null,input.path,input.statusCode,input.latencyMs??null]); }
   async enforceRateLimit(clientId:string, limitPerMinute:number) { const result=await this.pool.query(`select count(*)::int as count from gateway.request_log where client_id=$1 and requested_at>=now()-interval '1 minute'`,[clientId]); return Number(result.rows[0]?.count??0) < limitPerMinute; }
   async authorizeRoute(routeKey:string, scopes:string[]) { const result=await this.pool.query(`select route_key,visibility,required_scope,status from gateway.routes where route_key=$1`,[routeKey]); const route=result.rows[0]; if(!route||route.status==='disabled')return false; return !route.required_scope || scopes.includes(route.required_scope); }
+  async authorizeRequest(input:{method:string;path:string;apiKey?:string}) {
+    const publicRoute = await this.pool.query(`select route_key,visibility,required_scope,status,path_pattern from gateway.routes where method=$1 and status='active' order by case when visibility='public' then 0 else 1 end`,[input.method]);
+    const route = publicRoute.rows.find((r:any) => this.pathMatches(r.path_pattern,input.path));
+    if (!route) return { routeKey:'unregistered' as const };
+    if (route.visibility === 'public' && !input.apiKey) return { routeKey:route.route_key };
+    if (!input.apiKey) { const e:any=new Error('API key required'); e.code='UNAUTHORIZED'; throw e; }
+    const client = await this.authenticateApiKey(input.apiKey);
+    if (!client) { const e:any=new Error('Invalid, expired, revoked, or unapproved API key'); e.code='UNAUTHORIZED'; throw e; }
+    if (!(await this.authorizeRoute(route.route_key,client.allowed_scopes ?? []))) { const e:any=new Error('Required API scope not granted'); e.code='FORBIDDEN'; throw e; }
+    if (!(await this.enforceRateLimit(client.client_id,client.rate_limit_per_minute))) { const e:any=new Error('API rate limit exceeded'); e.code='RATE_LIMITED'; throw e; }
+    return { routeKey:route.route_key, clientId:client.client_id, apiKeyId:client.api_key_id };
+  }
+  private pathMatches(pattern:string,path:string){ const escaped=pattern.replace(/[.*+?^${}()|[\]\\]/g,'\\$&').replace(/\\\{[^}]+\\\}/g,'[^/]+'); return new RegExp(`^${escaped}$`).test(path); }
   private hashKey(key:string){return createHash('sha256').update(key).digest('hex');}
   private notFound(message:string):never{const e:any=new Error(message);e.code='NOT_FOUND';throw e;}
   private conflict(message:string):never{const e:any=new Error(message);e.code='CONFLICT';throw e;}
