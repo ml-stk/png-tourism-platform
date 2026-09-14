@@ -3,6 +3,7 @@ import type { Pool } from 'pg';
 
 export type GatewayClientStatus = 'pending'|'approved'|'suspended'|'revoked';
 export type GatewayClientType = 'internal'|'provincial'|'third_party';
+export interface GatewayAuthorization { routeKey:string; upstreamService:string; clientId?:string; apiKeyId?:string; }
 
 export class NtdpApiGatewayService {
   constructor(private readonly pool: Pool) {}
@@ -14,9 +15,24 @@ export class NtdpApiGatewayService {
   async keys(clientId?:string) { const result=await this.pool.query(`select id,client_id,key_prefix,label,status,expires_at,last_used_at,created_at,revoked_at from gateway.api_keys ${clientId?'where client_id=$1':''} order by created_at desc`,clientId?[clientId]:[]); return result.rows; }
   async routes(status?:string) { const result=await this.pool.query(`select id,route_key,method,path_pattern,description,visibility,required_scope,upstream_service,status,created_at,updated_at from gateway.routes ${status?'where status=$1':''} order by route_key`,status?[status]:[]); return result.rows; }
   async usage(clientId?:string,limit=100) { const safeLimit=Math.min(Math.max(Number(limit)||100,1),500); const result=await this.pool.query(`select request_id,client_id,api_key_id,method,route_key,path,status_code,latency_ms,requested_at from gateway.request_log ${clientId?'where client_id=$1':''} order by requested_at desc limit ${safeLimit}`,clientId?[clientId]:[]); return result.rows; }
-  async authenticateApiKey(rawKey:string) { const hash=this.hashKey(rawKey); const result=await this.pool.query(`select k.id api_key_id,k.client_id,c.status client_status,c.rate_limit_per_minute,c.allowed_scopes,k.expires_at from gateway.api_keys k join gateway.api_clients c on c.id=k.client_id where k.key_hash=$1 and k.status='active'`,[hash]); const row=result.rows[0]; if(!row||row.client_status!=='approved'||(row.expires_at&&new Date(row.expires_at).getTime()<=Date.now()))return null; await this.pool.query(`update gateway.api_keys set last_used_at=now() where id=$1`,[row.api_key_id]); return row; }
+  async authenticateApiKey(rawKey:string) { const hash=this.hashKey(rawKey); const result=await this.pool.query(`select k.id api_key_id,k.client_id,c.status client_status,c.rate_limit_per_minute,c.allowed_scopes,k.expires_at from gateway.api_keys k join gateway.api_clients c on c.id=k.client_id where k.key_hash=$1 and k.status='active'`,[hash]); const row=result.rows[0]; if(!row||row.client_status!=='approved'||(row.expires_at&&new Date(row.expires_at).getTime()<=Date.now()))return null; return row; }
+  async authorizeRequest(input:{method:string;path:string;apiKey?:string}):Promise<GatewayAuthorization>{
+    const result=await this.pool.query(`select route_key,visibility,required_scope,upstream_service from gateway.routes where method=$1 and path_pattern=$2 and status='active' limit 1`,[input.method,input.path]);
+    const route=result.rows[0];
+    if(!route)return {routeKey:'unregistered',upstreamService:'application'};
+    if(route.visibility==='public')return {routeKey:route.route_key,upstreamService:route.upstream_service};
+    if(!input.apiKey)this.gatewayError('API key required','UNAUTHORIZED');
+    const key=await this.authenticateApiKey(input.apiKey!); if(!key)this.gatewayError('Invalid or inactive API key','UNAUTHORIZED');
+    const scopes=Array.isArray(key.allowed_scopes)?key.allowed_scopes:[];
+    if(route.required_scope&&!scopes.includes(route.required_scope))this.gatewayError('API key does not have the required scope','FORBIDDEN');
+    const recent=await this.pool.query(`select count(*)::integer count from gateway.request_log where api_key_id=$1 and requested_at>=now()-interval '1 minute'`,[key.api_key_id]);
+    if(Number(recent.rows[0]?.count||0)>=Number(key.rate_limit_per_minute))this.gatewayError('API rate limit exceeded','RATE_LIMITED');
+    await this.pool.query(`update gateway.api_keys set last_used_at=now() where id=$1`,[key.api_key_id]);
+    return {routeKey:route.route_key,upstreamService:route.upstream_service,clientId:key.client_id,apiKeyId:key.api_key_id};
+  }
   async logRequest(input:{requestId:string;clientId?:string;apiKeyId?:string;method:string;routeKey?:string;path:string;statusCode:number;latencyMs?:number}) { await this.pool.query(`insert into gateway.request_log(request_id,client_id,api_key_id,method,route_key,path,status_code,latency_ms) values($1,$2,$3,$4,$5,$6,$7,$8)`,[input.requestId,input.clientId??null,input.apiKeyId??null,input.method,input.routeKey??null,input.path,input.statusCode,input.latencyMs??null]); }
   private hashKey(key:string){return createHash('sha256').update(key).digest('hex');}
+  private gatewayError(message:string,code:string):never{const e:any=new Error(message);e.code=code;throw e;}
   private notFound(message:string):never{const e:any=new Error(message);e.code='NOT_FOUND';throw e;}
   private conflict(message:string):never{const e:any=new Error(message);e.code='CONFLICT';throw e;}
 }
