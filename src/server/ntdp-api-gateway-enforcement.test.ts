@@ -3,21 +3,25 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { handleNtdpApiGatewayApi } from './ntdp-api-gateway-api';
 
 const service = vi.hoisted(() => ({
-  routes: vi.fn().mockResolvedValue([]),
-  clients: vi.fn().mockResolvedValue([]),
-  createClient: vi.fn(), transitionClient: vi.fn(), keys: vi.fn().mockResolvedValue([]), issueKey: vi.fn(),
-  revokeKey: vi.fn(), usage: vi.fn().mockResolvedValue([]), authenticateApiKey: vi.fn(), logRequest: vi.fn(),
+  routes: vi.fn().mockResolvedValue([]), clients: vi.fn().mockResolvedValue([]), createClient: vi.fn(),
+  transitionClient: vi.fn(), keys: vi.fn().mockResolvedValue([]), issueKey: vi.fn(), revokeKey: vi.fn(),
+  usage: vi.fn().mockResolvedValue([]), authenticateApiKey: vi.fn(), logRequest: vi.fn(),
 }));
 
-vi.mock('../services/ntdp-api-gateway-service', () => {
-  class NtdpApiGatewayServiceMock {
-    routes = service.routes; clients = service.clients; createClient = service.createClient;
-    transitionClient = service.transitionClient; keys = service.keys; issueKey = service.issueKey;
-    revokeKey = service.revokeKey; usage = service.usage;
-    authenticateApiKey = service.authenticateApiKey; logRequest = service.logRequest;
-  }
-  return { NtdpApiGatewayService: NtdpApiGatewayServiceMock };
-});
+vi.mock('../services/ntdp-api-gateway-service', () => ({
+  NtdpApiGatewayService: class {
+    routes(...args: any[]) { return service.routes(...args); }
+    clients(...args: any[]) { return service.clients(...args); }
+    createClient(...args: any[]) { return service.createClient(...args); }
+    transitionClient(...args: any[]) { return service.transitionClient(...args); }
+    keys(...args: any[]) { return service.keys(...args); }
+    issueKey(...args: any[]) { return service.issueKey(...args); }
+    revokeKey(...args: any[]) { return service.revokeKey(...args); }
+    usage(...args: any[]) { return service.usage(...args); }
+    authenticateApiKey(...args: any[]) { return service.authenticateApiKey(...args); }
+    logRequest(...args: any[]) { return service.logRequest(...args); }
+  },
+}));
 vi.mock('pg', () => ({ Pool: vi.fn() }));
 vi.mock('./api', () => ({ authenticate: vi.fn().mockResolvedValue({ user: { id: 'user-1' } }) }));
 vi.mock('../auth/authorization', () => ({ requirePermission: vi.fn() }));
@@ -26,9 +30,7 @@ type MockResponse = ServerResponse & { body?: string };
 function request(method: string, path: string, headers: Record<string, string> = {}, body = ''): IncomingMessage {
   return { method, url: path, headers, [Symbol.asyncIterator]: async function* () { if (body) yield Buffer.from(body); } } as unknown as IncomingMessage;
 }
-function response() {
-  return { setHeader: vi.fn(), end(this: MockResponse, value?: string) { this.body = value; }, statusCode: 0 } as unknown as MockResponse;
-}
+function response() { return { setHeader: vi.fn(), end(this: MockResponse, value?: string) { this.body = value; }, statusCode: 0 } as unknown as MockResponse; }
 
 describe('NTDP API gateway administration', () => {
   it('requires authentication for gateway administration', async () => {
