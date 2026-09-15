@@ -5,10 +5,10 @@ function poolFor(status: string) {
   const calls: string[] = [];
   const pool = {
     calls,
-    query: async (sql: string) => {
+    query: async (sql: string, params: any[] = []) => {
       calls.push(sql);
       if (sql.includes('select id,status from gateway.api_clients')) return { rowCount: 1, rows: [{ id: 'client-1', status }] };
-      if (sql.includes('update gateway.api_clients')) return { rowCount: 1, rows: [{ id: 'client-1', name: 'Test client', status: 'approved', updated_at: new Date().toISOString() }] };
+      if (sql.includes('update gateway.api_clients')) return { rowCount: 1, rows: [{ id: 'client-1', name: 'Test client', status: params[1], updated_at: new Date().toISOString() }] };
       return { rowCount: 1, rows: [] };
     },
   };
@@ -23,10 +23,10 @@ describe('NtdpApiGatewayService client lifecycle', () => {
 
   it('allows approved to suspended and revoked', async () => {
     const suspended = new NtdpApiGatewayService(poolFor('approved'));
-    await expect(suspended.transitionClient('client-1', 'suspended', 'actor-1')).resolves.toMatchObject({ status: 'approved' });
+    await expect(suspended.transitionClient('client-1', 'suspended', 'actor-1')).resolves.toMatchObject({ status: 'suspended' });
 
     const revoked = new NtdpApiGatewayService(poolFor('approved'));
-    await expect(revoked.transitionClient('client-1', 'revoked', 'actor-1')).resolves.toMatchObject({ status: 'approved' });
+    await expect(revoked.transitionClient('client-1', 'revoked', 'actor-1')).resolves.toMatchObject({ status: 'revoked' });
   });
 
   it('allows suspended to approved and revoked', async () => {
@@ -34,7 +34,7 @@ describe('NtdpApiGatewayService client lifecycle', () => {
     await expect(approved.transitionClient('client-1', 'approved', 'actor-1')).resolves.toMatchObject({ status: 'approved' });
 
     const revoked = new NtdpApiGatewayService(poolFor('suspended'));
-    await expect(revoked.transitionClient('client-1', 'revoked', 'actor-1')).resolves.toMatchObject({ status: 'approved' });
+    await expect(revoked.transitionClient('client-1', 'revoked', 'actor-1')).resolves.toMatchObject({ status: 'revoked' });
   });
 
   it('rejects reopening or changing a revoked client', async () => {
