@@ -4,11 +4,27 @@ import type { Pool } from 'pg';
 export type GatewayClientStatus = 'pending'|'approved'|'suspended'|'revoked';
 export type GatewayClientType = 'internal'|'provincial'|'third_party';
 
+const GATEWAY_CLIENT_TRANSITIONS: Record<GatewayClientStatus, GatewayClientStatus[]> = {
+  pending: ['approved', 'revoked'],
+  approved: ['suspended', 'revoked'],
+  suspended: ['approved', 'revoked'],
+  revoked: [],
+};
+
 export class NtdpApiGatewayService {
   constructor(private readonly pool: Pool) {}
   async clients(status?: GatewayClientStatus) { const result=await this.pool.query(`select id,name,organisation,contact_email,client_type,status,rate_limit_per_minute,allowed_scopes,created_at,updated_at from gateway.api_clients ${status?'where status=$1':''} order by created_at desc`,status?[status]:[]); return result.rows; }
   async createClient(input:{name:string;organisation?:string;contactEmail?:string;clientType?:GatewayClientType;rateLimitPerMinute?:number;allowedScopes?:string[];createdBy:string}) { const result=await this.pool.query(`insert into gateway.api_clients(name,organisation,contact_email,client_type,rate_limit_per_minute,allowed_scopes,created_by) values($1,$2,$3,$4,$5,$6::jsonb,$7) returning id,name,organisation,contact_email,client_type,status,rate_limit_per_minute,allowed_scopes,created_at`,[input.name,input.organisation??null,input.contactEmail??null,input.clientType??'third_party',input.rateLimitPerMinute??60,JSON.stringify(input.allowedScopes??[]),input.createdBy]); return result.rows[0]; }
-  async transitionClient(id:string,status:GatewayClientStatus,changedBy:string) { const result=await this.pool.query(`update gateway.api_clients set status=$2,updated_at=now() where id=$1 returning id,name,status,updated_at`,[id,status]); if(!result.rowCount)this.notFound('API client not found'); await this.pool.query(`insert into audit_events(id,actor_id,action,target_type,target_id,outcome,occurred_at) values(gen_random_uuid(),$1,$2,$3,$4,'success',now())`,[changedBy,'gateway.client.status_changed','api_client',id]); return result.rows[0]; }
+  async transitionClient(id:string,status:GatewayClientStatus,changedBy:string) {
+    const current=await this.pool.query(`select id,status from gateway.api_clients where id=$1`,[id]);
+    if(!current.rowCount)this.notFound('API client not found');
+    const fromStatus=current.rows[0].status as GatewayClientStatus;
+    if(!GATEWAY_CLIENT_TRANSITIONS[fromStatus]?.includes(status))this.conflict(`Invalid API client status transition: ${fromStatus} -> ${status}`);
+    const result=await this.pool.query(`update gateway.api_clients set status=$2,updated_at=now() where id=$1 returning id,name,status,updated_at`,[id,status]);
+    if(!result.rowCount)this.notFound('API client not found');
+    await this.pool.query(`insert into audit_events(id,actor_id,action,target_type,target_id,outcome,occurred_at) values(gen_random_uuid(),$1,$2,$3,$4,'success',now())`,[changedBy,'gateway.client.status_changed','api_client',id]);
+    return result.rows[0];
+  }
   async issueKey(input:{clientId:string;label?:string;expiresAt?:string;createdBy:string}) { const key=`pngtp_${randomBytes(24).toString('base64url')}`,hash=this.hashKey(key),prefix=key.slice(0,14); const client=await this.pool.query(`select id,status from gateway.api_clients where id=$1`,[input.clientId]); if(!client.rowCount)this.notFound('API client not found'); if(client.rows[0].status!=='approved')this.conflict('API client must be approved before issuing a key'); const result=await this.pool.query(`insert into gateway.api_keys(client_id,key_prefix,key_hash,label,expires_at,created_by) values($1,$2,$3,$4,$5,$6) returning id,client_id,key_prefix,label,status,expires_at,created_at`,[input.clientId,prefix,hash,input.label??null,input.expiresAt??null,input.createdBy]); return {...result.rows[0],secret:key}; }
   async revokeKey(id:string,changedBy?:string) { const result=await this.pool.query(`update gateway.api_keys set status='revoked',revoked_at=now() where id=$1 and status='active' returning id,client_id,key_prefix,status,revoked_at`,[id]); if(!result.rowCount)this.notFound('API key not found or already revoked'); if(changedBy)await this.pool.query(`insert into audit_events(id,actor_id,action,target_type,target_id,outcome,occurred_at) values(gen_random_uuid(),$1,$2,$3,$4,'success',now())`,[changedBy,'gateway.api_key.revoked','api_key',id]); return result.rows[0]; }
   async keys(clientId?:string) { const result=await this.pool.query(`select id,client_id,key_prefix,label,status,expires_at,last_used_at,created_at,revoked_at from gateway.api_keys ${clientId?'where client_id=$1':''} order by created_at desc`,clientId?[clientId]:[]); return result.rows; }
