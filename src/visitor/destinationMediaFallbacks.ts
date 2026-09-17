@@ -8,14 +8,14 @@ const commons = (file: string) => `https://commons.wikimedia.org/wiki/Special:Fi
 
 export const destinationMediaFallbacks: Record<string, DestinationFallbackMedia> = {
   'alotau': { url: commons('MilneBay-Alotau.JPG'), altText: 'Milne Bay waterfront at Alotau, Papua New Guinea', credit: 'Wikimedia Commons — Manuel Hetzel, CC BY-SA 3.0' },
-  'bomana-war-cemetery': { url: commons('View of Nine-Mile Quarry from Bomana War Cemetery near Port Moresby.jpg'), altText: 'View from Bomana War Cemetery near Port Moresby', credit: 'Wikimedia Commons — arthur_chapman, CC BY 2.0' },
+  'bomana-war-cemetery': { url: 'https://d1ldvf68ux039x.cloudfront.net/thumbs/photos/2407/8529263/2000w_q95.jpg', altText: 'Bomana War Cemetery, Port Moresby, Papua New Guinea', credit: 'U.S. Navy / DVIDS — CPO Shannon Smith, public domain' },
   'bougainville-island': { url: commons('Bagana Volcano.jpg'), altText: 'Bagana Volcano on Bougainville Island, Papua New Guinea', credit: 'Wikimedia Commons — U.S. Geological Survey, public domain' },
   'ela-beach': { url: 'assets/destinations/ela-beach_img1.png', altText: 'Ela Beach waterfront and APEC Haus at night, Port Moresby', credit: 'PNGTPA project asset' },
   'fly-river': { url: commons('Beautiful true-color image of the Fly River in Papua New Guinea from S-NPP (25176332426).jpg'), altText: 'Fly River in Papua New Guinea', credit: 'Wikimedia Commons — NASA/NOAA imagery' },
   'goroka': { url: commons('Goroka.JPG'), altText: 'Goroka, Eastern Highlands Province, Papua New Guinea', credit: 'Wikimedia Commons — Manuel Hetzel, CC BY 3.0' },
   'isurava-memorial': { url: commons('Kokoda track Papua New Guinea.JPG'), altText: 'Kokoda Track between Kokoda and Isurava, Papua New Guinea', credit: 'Wikimedia Commons — Luke Brindley, CC BY-SA 4.0' },
-  'kavieng': { url: commons('Kavieng underwater 596.jpg'), altText: 'Underwater scene at Kavieng, New Ireland Province', credit: 'Wikimedia Commons — licensed media' },
-  'kimbe-bay': { url: commons('Kimbe Bay islands.jpg'), altText: 'Kimbe Bay islands, West New Britain Province', credit: 'Wikimedia Commons — licensed media' },
+  'kavieng': { url: commons('Kavieng underwater 596.jpg'), altText: 'Underwater scene at Kavieng, New Ireland Province, Papua New Guinea', credit: 'Wikimedia Commons — licensed media' },
+  'kimbe-bay': { url: commons('Kimbe Bay islands.jpg'), altText: 'Kimbe Bay islands, West New Britain Province, Papua New Guinea', credit: 'Wikimedia Commons — licensed media' },
   'kiriwina': { url: commons('A Kiriwina Village, Memoirs Bishop Museum, Vol. II, Fig. 55.jpg'), altText: 'Kiriwina village in the Trobriand Islands, Papua New Guinea', credit: 'Wikimedia Commons — Bernice Pauahi Bishop Museum, public domain' },
   'loloata-island': { url: commons('(Aerial view of Port Moresby coastline in Papua New Guinea) - DPLA - e1029ad7f197bd6a97d7e8c84e6cfa95.jpg'), altText: 'Aerial coastal view near Port Moresby, Papua New Guinea', credit: 'Wikimedia Commons — DPLA contribution' },
   'madang': { url: commons('Madang (5501569807).jpg'), altText: 'Madang, Papua New Guinea', credit: 'Wikimedia Commons — eGuide Travel' },
