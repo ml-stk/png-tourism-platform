@@ -14,7 +14,8 @@ const destinationGuideUrls: Record<string, string> = {
 };
 function withFallbackMedia(d: Destination): Destination {
   const fallbackMedia = destinationMediaFallbacks[d.slug];
-  if (d.media?.length || !fallbackMedia) return d;
+  const hasUsableMedia = Array.isArray(d.media) && Boolean(d.media[0]?.publicUrl);
+  if (hasUsableMedia || !fallbackMedia) return d;
   return { ...d, media: [{ id: `fallback-${d.slug}`, publicUrl: fallbackMedia.url, altText: fallbackMedia.altText, caption: fallbackMedia.credit }] };
 }
 function governedFallback(): Destination[] {
