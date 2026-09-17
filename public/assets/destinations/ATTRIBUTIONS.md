@@ -8,4 +8,7 @@ The following hero images are sourced from Wikimedia Commons and are used under 
 - Sepik River — File: Sepik River IMG 2119.jpg — author David Bacon — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Sepik_River_IMG_2119.jpg
 - Western Highlands — File: Mount Hagen Sing Sing 2019 (49059928568).jpg — author gailhampshire — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Mount_Hagen_Sing_Sing_2019_(49059928568).jpg
 
-Ela Beach images supplied directly by PNG Tourism Promotion Authority/project user are pending binary upload into the repository. They should replace the current third-party URLs before final acceptance.
+Ela Beach assets
+
+- ela-beach_img1.png — supplied directly by PNG Tourism Promotion Authority/project user; cleared for project use.
+- ela-beach_img2.png — supplied directly by PNG Tourism Promotion Authority/project user; cleared for project use.
