@@ -42,24 +42,12 @@ function id(prefix, n) { return `${prefix}-${String(n).padStart(6, '0')}`; }
 
 const operators = Array.from({ length: operatorsCount }, (_, i) => {
   const p = pick(provinces); const st = pick(statuses); const c = st === 'active' ? pick(['compliant', 'compliant', 'conditional']) : pick(compliance);
-  return {
-    demo_id: id('OP', i + 1),
-    legal_name: `NTDP DEMO OPERATOR ${String(i + 1).padStart(4, '0')}`,
-    trading_name: `${pick(['Highlands','Island','Sepik','Kokoda','Coral','Rainforest','Heritage','Adventure'])} ${pick(['Adventures','Tours','Travel','Lodges','Experiences'])} ${i + 1}`,
-    province_code: p[0], status: st, compliance_status: c, synthetic: true
-  };
+  return { demo_id: id('OP', i + 1), legal_name: `NTDP DEMO OPERATOR ${String(i + 1).padStart(4, '0')}`, trading_name: `${pick(['Highlands','Island','Sepik','Kokoda','Coral','Rainforest','Heritage','Adventure'])} ${pick(['Adventures','Tours','Travel','Lodges','Experiences'])} ${i + 1}`, province_code: p[0], status: st, compliance_status: c, synthetic: true };
 });
 
 const workload = {
-  seed, scale, source_basis: 'PNG Tourism Promotion Authority official travel site',
-  provinces, destinations, operators,
-  planned_counts: {
-    industry_profiles: 500, experiences: 750, content_items: 300, sme_profiles: 500,
-    sme_assessments: 500, sme_programs: 15, sme_enrolments: 1200,
-    tia_memberships: 500, regulatory_licenses: 500, inspections: 1000,
-    compliance_actions: 700, visitor_engagement_events: 15000, visitor_leads: 2500,
-    gateway_clients: 25, gateway_keys: 25, gateway_request_log: 50000
-  },
+  seed, scale, source_basis: 'PNG Tourism Promotion Authority official travel site', provinces, destinations, operators,
+  planned_counts: { industry_profiles: 500 * scale, experiences: 750 * scale, content_items: 300 * scale, sme_profiles: 500 * scale, sme_assessments: 500 * scale, sme_programs: 15, sme_enrolments: 1200 * scale, tia_memberships: 500 * scale, regulatory_licenses: 500 * scale, inspections: 1000 * scale, compliance_actions: 700 * scale, visitor_engagement_events: 15000 * scale, visitor_leads: 2500 * scale, gateway_clients: 25 * scale, gateway_keys: 25 * scale, gateway_request_log: 50000 * scale },
   experience_themes: experienceThemes, event_sources: sources,
   note: 'All operators, lifecycle records, events and gateway traffic are synthetic. Destination and tourism-theme references use real PNG places and official PNGTPA source material.'
 };
