@@ -14,6 +14,9 @@ export async function handleDestinationPublicApi(req: IncomingMessage, res: Serv
   const url = new URL(req.url || '/', 'http://localhost');
   if (!url.pathname.startsWith('/api/v1/public/destinations')) return false;
   res.setHeader('content-type', 'application/json; charset=utf-8');
+  // Destination media references are governed data and can change independently of the UI bundle.
+  // Prevent intermediary/browser caching from serving an obsolete asset URL after a media correction.
+  res.setHeader('cache-control', 'no-store, max-age=0');
   applySecurityHeaders(res);
   if (!enforceRateLimit(req, res)) return true;
   try {
