@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { Pool } from 'pg';
 import { requirePermission } from '../auth/authorization';
 import { authenticate } from './api';
 import { NtdpApiGatewayService, type GatewayClientStatus, type GatewayClientType } from '../services/ntdp-api-gateway-service';
@@ -27,8 +26,8 @@ export async function handleNtdpApiGatewayApiWithService(req:IncomingMessage,res
     if(req.method==='DELETE'&&url.pathname.match(/^\/api\/v1\/ntdp\/gateway\/keys\/[^/]+$/)){requirePermission(context,'gateway:write');return send(res,200,{data:await gatewayService.revokeKey(url.pathname.split('/').pop()!,context.user.id),requestId});}
     if(req.method==='GET'&&url.pathname==='/api/v1/ntdp/gateway/usage'){requirePermission(context,'gateway:read');const limit=Number(url.searchParams.get('limit')||100);return send(res,200,{data:await gatewayService.usage(url.searchParams.get('clientId')||undefined,limit),requestId});}
     return fail(res,404,'NOT_FOUND','Gateway route not found',requestId);
-  }catch(e:any){const status=e?.code==='UNAUTHORIZED'?401:e?.code==='FORBIDDEN'?403:e?.code==='NOT_FOUND'?404:e?.code==='VALIDATION_ERROR'?400:e?.code==='CONFLICT'?409:500;return fail(res,status,e?.code||'INTERNAL_ERROR',status===500?'Internal server error':e.message,requestId);}
+  }catch(e:any){const status=e?.code==='UNAUTHORIZED'?401:e?.code==='FORBIDDEN'?403:e?.code==='NOT_FOUND'?404:e?.code==='VALIDATION_ERROR'?400:e?.code==='CONFLICT'?409:e?.code==='RATE_LIMITED'?429:500;return fail(res,status,e?.code||'INTERNAL_ERROR',status===500?'Internal server error':e.message,requestId,status===429?{'retry-after':'60'}:undefined);}
 }
 async function readJson(req:IncomingMessage){const chunks:Buffer[]=[];for await(const chunk of req)chunks.push(Buffer.from(chunk));try{const body=JSON.parse(Buffer.concat(chunks).toString('utf8'));if(!body||typeof body!=='object'||Array.isArray(body))throw new Error();return body as Record<string,unknown>;}catch{const e:any=new Error('Invalid JSON body');e.code='VALIDATION_ERROR';throw e;}}
-function send(res:ServerResponse,status:number,body:unknown){res.statusCode=status;res.setHeader('content-type','application/json; charset=utf-8');res.end(JSON.stringify(body));return true;}
-function fail(res:ServerResponse,status:number,code:string,message:string,requestId:string){return send(res,status,{error:{code,message},requestId});}
+function send(res:ServerResponse,status:number,body:unknown,headers:Record<string,string>={}){res.statusCode=status;res.setHeader('content-type','application/json; charset=utf-8');for(const [key,value] of Object.entries(headers))res.setHeader(key,value);res.end(JSON.stringify(body));return true;}
+function fail(res:ServerResponse,status:number,code:string,message:string,requestId:string,headers?:Record<string,string>){return send(res,status,{error:{code,message},requestId},headers);}
