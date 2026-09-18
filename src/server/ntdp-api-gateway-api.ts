@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { Pool } from 'pg';
 import { requirePermission } from '../auth/authorization';
 import { authenticate } from './api';
 import { NtdpApiGatewayService, type GatewayClientStatus, type GatewayClientType } from '../services/ntdp-api-gateway-service';
