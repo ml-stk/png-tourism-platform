@@ -23,9 +23,7 @@ const publicRoute = { route_key: 'public-destination-detail', visibility: 'publi
 const protectedRoute = { route_key: 'gateway-usage', visibility: 'protected', required_scope: 'gateway:read', status: 'active', path_pattern: '/api/v1/ntdp/gateway/usage' };
 const validKey = 'pngtp_test-key';
 const validHash = createHash('sha256').update(validKey).digest('hex');
-
 const approvedClient = { api_key_id: 'key-1', client_id: 'client-1', client_status: 'approved', rate_limit_per_minute: 60, allowed_scopes: ['gateway:read'], expires_at: null };
-
 
 describe('NtdpApiGatewayService authorization', () => {
   it('allows a registered public route without an API key', async () => {
@@ -55,9 +53,31 @@ describe('NtdpApiGatewayService authorization', () => {
     await expect(service.authorizeRequest({ method: 'GET', path: '/api/v1/ntdp/gateway/usage', apiKey: validKey })).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
   });
 
+  it('rejects a revoked key', async () => {
+    const service = new NtdpApiGatewayService({
+      query: async (sql: string) => {
+        if (sql.includes('from gateway.routes where method=$1')) return { rows: [protectedRoute] };
+        if (sql.includes('from gateway.api_keys k join gateway.api_clients c')) return { rows: [] };
+        return { rowCount: 1, rows: [] };
+      },
+    } as any);
+    await expect(service.authorizeRequest({ method: 'GET', path: '/api/v1/ntdp/gateway/usage', apiKey: validKey })).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
+  });
+
   it('rejects a client that has reached its minute rate limit', async () => {
     const client = { ...approvedClient, rate_limit_per_minute: 2, requestCount: 2 };
     const service = new NtdpApiGatewayService(poolFor(protectedRoute, client));
     await expect(service.authorizeRequest({ method: 'GET', path: '/api/v1/ntdp/gateway/usage', apiKey: validKey })).rejects.toMatchObject({ code: 'RATE_LIMITED' });
+  });
+
+  it('keeps approved-partner routes distinct from public paths', async () => {
+    const routes = [
+      { route_key: 'public-destinations', visibility: 'public', required_scope: null, status: 'active', path_pattern: '/api/v1/public/destinations' },
+      { route_key: 'partner-destinations', visibility: 'approved_partner', required_scope: 'destinations:read', status: 'active', path_pattern: '/api/v1/partner/destinations' },
+    ];
+    const service = new NtdpApiGatewayService({
+      query: async (sql: string) => sql.includes('from gateway.routes where method=$1') ? { rows: routes } : { rowCount: 1, rows: [] },
+    } as any);
+    await expect(service.authorizeRequest({ method: 'GET', path: '/api/v1/partner/destinations' })).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
   });
 });
