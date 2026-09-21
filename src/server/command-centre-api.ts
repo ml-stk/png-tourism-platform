@@ -5,7 +5,7 @@ import { PostgresOperatorRepository, PostgresDestinationRepository, PostgresCont
 import { PostgresVisitorEngagementRepository } from '../persistence/visitor-engagement-repository';
 import { CommandCentreService } from '../services/command-centre-service';
 import { requirePermission, requireProvinceAccess } from '../auth/authorization';
-import { authenticateBearerToken } from '../auth/token-auth';
+import { authenticate as authenticateApi } from './api';
 import { applySecurityHeaders, enforceRateLimit, requestBodyLimit } from './security';
 import type { MetricPeriod } from '../domain/intelligence';
 import type { ProvinceCode } from '../domain/types';
@@ -29,7 +29,7 @@ export async function handleCommandCentreApi(req: IncomingMessage, res: ServerRe
   if (!enforceRateLimit(req, res)) return true;
   try {
     requestBodyLimit(req);
-    const context = authenticate(req, requestId);
+    const context = await authenticate(req, requestId);
     requirePermission(context, 'intelligence:read');
     const rawPeriod = url.searchParams.get('period') || 'month';
     if (!periods.has(rawPeriod as MetricPeriod)) throwValidation('Invalid reporting period');
@@ -44,11 +44,6 @@ export async function handleCommandCentreApi(req: IncomingMessage, res: ServerRe
 }
 
 function parseProvince(value: string): ProvinceCode { if (!provinceCodes.has(value as ProvinceCode)) throwValidation('Invalid province code'); return value as ProvinceCode; }
-function authenticate(req: IncomingMessage, requestId: string) {
-  if (process.env.NODE_ENV === 'production') return { user: authenticateBearerToken(req.headers.authorization, process.env.AUTH_JWT_SECRET || ''), requestId };
-  const subject = req.headers.authorization?.replace(/^Bearer\s+/i, '') || (process.env.DEV_IDENTITY_SUBJECT || 'development');
-  const roles = (process.env.DEV_IDENTITY_ROLES || 'platform_admin').split(',').map(r => r.trim()).filter(Boolean);
-  return { user: { id: process.env.DEV_IDENTITY_USER_ID || '00000000-0000-0000-0000-000000000001', externalSubject: subject, email: process.env.DEV_IDENTITY_EMAIL || 'developer@pngtourism.local', displayName: 'Development User', roles: roles as any }, requestId };
-}
+async function authenticate(req: IncomingMessage, requestId: string) { return authenticateApi(req, requestId); }
 function throwValidation(message: string): never { const e: any = new Error(message); e.code = 'VALIDATION_ERROR'; throw e; }
 function send(res: ServerResponse, status: number, body: unknown) { res.statusCode = status; res.end(JSON.stringify(body)); return true; }
