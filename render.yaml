@@ -13,6 +13,10 @@ services:
         sync: false
       - key: AUTH_JWT_SECRET
         sync: false
+      - key: SUPABASE_URL
+        value: https://yxhatvvgietyvjhlqoqg.supabase.co
+      - key: SUPABASE_PUBLISHABLE_KEY
+        value: sb_publishable_6Uvf7P0AQzyTEyJeMRIe8Q_jrGNDOx9
       - key: CORS_ALLOWED_ORIGIN
         value: https://stream-tech-knowledge.gitlab.io,https://ml-stk.github.io
       - key: REQUEST_BODY_MAX_BYTES
