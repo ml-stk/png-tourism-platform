@@ -1,6 +1,6 @@
 {
   "name":"png-tourism-platform","private":true,"version":"0.1.0","type":"module",
-  "scripts":{"dev":"vite","build":"tsc -b && vite build","build:server":"tsc -p tsconfig.server.json && node scripts/build-server.mjs","test":"vitest run","preview":"vite preview","start:api":"node dist-server/server/index.js"},
+  "scripts":{"dev":"vite","build":"tsc -b && vite build","build:server":"tsc -p tsconfig.server.json && node scripts/build-server.mjs","test":"vitest run","preview":"vite preview","start:api":"npm run build:server && node dist-server/server/index.js"},
   "dependencies":{"@tailwindcss/vite":"latest","@vitejs/plugin-react":"latest","lucide-react":"latest","pg":"latest","qrcode":"^1.5.4","react":"latest","react-dom":"latest","tailwindcss":"latest","typescript":"latest","vite":"latest"},
   "devDependencies":{"@types/node":"latest","@types/pg":"latest","@types/qrcode":"^1.5.5","@types/react":"latest","@types/react-dom":"latest","esbuild":"latest","vitest":"latest"}
 }
