@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Activity, Building2, Compass, RefreshCw, Users, type LucideIcon } from 'lucide-react';
 import OperatorReviewQueue from './OperatorReviewQueue';
+import { apiFetch } from '../api';
 
 type ProvinceInsight = { provinceCode: string; publishedDestinations: number; activeOperators: number; compliantOperators: number; publishedExperiences: number; visitorSignals: number; engagementSignals: number };
 type Report = { generatedAt: string; period: string; snapshot: { visitors: number; publishedDestinations: number; activeOperators: number; compliantOperators: number; publishedExperiences: number; provincesRepresented: number }; engagement: { totalSignals: number; experienceViews: number; savedExperiences: number; itineraryAdds: number; qrHandoffs: number }; provinces: ProvinceInsight[]; freshness: { source: string; generatedAt: string; governed: true }[] };
@@ -10,7 +11,7 @@ type EngagementMetric = { label: string; value: number };
 const periods = ['day', 'week', 'month', 'quarter', 'year'];
 export default function CommandCentre() {
   const [period, setPeriod] = useState('month'); const [province, setProvince] = useState(''); const [report, setReport] = useState<Report | null>(null); const [loading, setLoading] = useState(true); const [error, setError] = useState('');
-  const load = async () => { setLoading(true); setError(''); try { const qs = new URLSearchParams({ period }); if (province) qs.set('province', province); const response = await fetch(`/api/v1/command-centre/report?${qs}`); if (!response.ok) throw new Error('Unable to load Command Centre data'); const body = await response.json(); setReport(body.data); } catch (e) { setError(e instanceof Error ? e.message : 'Unable to load Command Centre data'); } finally { setLoading(false); } };
+  const load = async () => { setLoading(true); setError(''); try { const qs = new URLSearchParams({ period }); if (province) qs.set('province', province); const response = await apiFetch(`/api/v1/command-centre/report?${qs}`); if (!response.ok) throw new Error('Unable to load Command Centre data'); const body = await response.json(); setReport(body.data); } catch (e) { setError(e instanceof Error ? e.message : 'Unable to load Command Centre data'); } finally { setLoading(false); } };
   useEffect(() => { void load(); }, [period, province]);
   const snapshot = report?.snapshot;
   const metricCards: MetricCard[] = snapshot ? [
