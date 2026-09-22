@@ -11,7 +11,7 @@ type EngagementMetric = { label: string; value: number };
 const periods = ['day', 'week', 'month', 'quarter', 'year'];
 export default function CommandCentre() {
   const [period, setPeriod] = useState('month'); const [province, setProvince] = useState(''); const [report, setReport] = useState<Report | null>(null); const [loading, setLoading] = useState(true); const [error, setError] = useState('');
-  const load = async () => { setLoading(true); setError(''); try { const qs = new URLSearchParams({ period }); if (province) qs.set('province', province); const response = await apiFetch(`/api/v1/command-centre/report?${qs}`); if (!response.ok) throw new Error('Unable to load Command Centre data'); const body = await response.json(); setReport(body.data); } catch (e) { setError(e instanceof Error ? e.message : 'Unable to load Command Centre data'); } finally { setLoading(false); } };
+  const load = async () => { setLoading(true); setError(''); try { const qs = new URLSearchParams({ period }); if (province) qs.set('province', province); const response = await apiFetch(`/api/v1/intelligence/report?${qs}`); if (!response.ok) throw new Error('Unable to load Command Centre data'); const body = await response.json(); setReport(body.data); } catch (e) { setError(e instanceof Error ? e.message : 'Unable to load Command Centre data'); } finally { setLoading(false); } };
   useEffect(() => { void load(); }, [period, province]);
   const snapshot = report?.snapshot;
   const metricCards: MetricCard[] = snapshot ? [
