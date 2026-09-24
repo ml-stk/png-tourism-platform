@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Bot, ChevronRight, CircleAlert, Compass, Loader2, MapPin, MessageCircle, Send, ShieldCheck, Sparkles, WifiOff } from 'lucide-react';
+import { apiFetch } from '../api';
 
 type Source = { id:string; kind:string; title:string; provenance:string; publicationStatus:'published' };
 type Response = { sessionId:string; answer:string; sources:Source[]; modelVersion:string; promptVersion:string; governed:true; refused?:boolean; refusalReason?:string };
@@ -26,11 +27,12 @@ export default function AiConcierge() {
     setMessage(''); setError(''); setMessages(current => [...current, { role:'user', text:value }]); setBusy(true);
     try {
       if (!navigator.onLine) throw new Error('offline');
-      const response = await fetch('/api/v1/ai/concierge', { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({ message:value, ...(sessionId ? { sessionId } : {}) }) });
+      const response = await apiFetch('/api/v1/ai/concierge', { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({ message:value, ...(sessionId ? { sessionId } : {}) }) });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload?.error?.message || 'The Concierge is temporarily unavailable.');
       const data = payload.data as Response;
       if (data.sessionId) localStorage.setItem('png-ai-session', data.sessionId);
+      setOffline(false);
       setMessages(current => [...current, { role:'assistant', text:data.answer, sources:data.sources, refused:data.refused }]);
     } catch (e) {
       if ((e as Error).message === 'offline') { setOffline(true); setError('The Concierge needs a connection for a live governed answer. Your saved trip and cached tourism content remain available.'); }
