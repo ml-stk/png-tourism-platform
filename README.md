@@ -1,33 +1,50 @@
 # PNG Tourism Platform
 
-Next-generation digital platform for the Papua New Guinea Tourism Promotion Authority (TPA).
+Production-oriented national tourism digital platform for the Papua New Guinea Tourism Promotion Authority (PNGTPA).
 
-## Purpose
+## Current delivery scope
 
-This repository is a clean successor project built from the existing PNG Tourism Digital Platform MVP as a reference baseline. The existing project remains untouched.
+The repository now contains a runnable platform foundation with:
 
-## Architecture direction
+- Public PNG tourism visitor experience
+- Destination discovery and published destination content
+- Visitor journey planning and digital passport flows
+- AI Concierge entry point
+- Tourism industry discovery and operator workflows
+- TPA Command Centre, content studio, campaign/event and tourism intelligence views
+- Versioned API, identity/RBAC, audit and governed data services
+- Supabase/PostgreSQL migrations and GitHub Actions CI/CD
 
-- Visitor experience: web, mobile/PWA, kiosk and QR journeys
-- Tourism intelligence: TPA command centre, analytics and reporting
-- Industry ecosystem: operator self-service, business profiles and partner workflows
-- Content and campaigns: destinations, events, campaigns and media
-- Visitor services: maps, itineraries, offline capability, assistance and digital tourism passport
-- Platform services: API, identity/RBAC, audit, security, integrations and data
+The implementation is being aligned to the NTDP Concept Note and MVP direction: the National Tourism Registry remains the authoritative record, while visitor, industry, content, analytics and future channels consume governed platform services.
 
-## Principles
+## Architecture principles
 
-1. API-first and modular
-2. Offline-first where connectivity is unreliable
-3. Secure-by-design with strong identity, RBAC and auditability
-4. Data-driven tourism intelligence
-5. Reusable services across every channel
-6. Designed for phased production deployment
+1. **Registry-first:** one authoritative tourism record reused by mapping, membership, licensing, distribution and reporting.
+2. **API-first:** experience channels consume shared services rather than duplicating business rules.
+3. **Security-by-design:** least privilege, server-side authorization, validation and auditability are mandatory.
+4. **Offline-aware:** critical visitor and operator journeys must degrade gracefully when connectivity is poor.
+5. **Usage-led delivery:** high-value visitor and authority workflows are prioritised; lower-frequency enterprise capabilities remain modular and progressively disclosed.
+6. **Phased delivery:** the platform follows the Concept Note's four implementation horizons rather than attempting to expose every future capability at once.
 
-## Initial status
+## Local development
 
-Architecture foundation only. Application modules will be introduced incrementally so each major capability can be reviewed and tested independently.
+```bash
+npm install
+npm run test
+npm run build
+npm run build:server
+```
 
-## Repository
+## CI/CD
 
-GitLab: https://gitlab.com/stream-tech-knowledge/png-tourism-platform
+GitHub Actions runs the test suite, frontend build, server build and API smoke acceptance on pushes and pull requests. GitHub Pages publishes the public frontend from `main`.
+
+## Project documentation
+
+- `ARCHITECTURE.md` — target architecture and delivery sequence
+- `docs/usage-redo-plan.md` — usage-led cleanup and acceptance gates
+- `tests/` — automated and acceptance-oriented checks
+
+## Source direction
+
+The NTDP Concept Note defines the national platform vision, nine core modules, five experience channels and four implementation horizons. The proposed MVP explicitly limits the initial two-month deliverable to vision/scope, visual prototypes, solution architecture, system flows and today/tomorrow process views rather than a full software build.
