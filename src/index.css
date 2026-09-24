@@ -4,3 +4,7 @@
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; }
 button, input, select, textarea { font: inherit; }
+
+/* Visitor light-surface contrast: keep secondary text readable on white cards. */
+.bg-white .text-slate-500 { color: #334155 !important; }
+.bg-white .text-slate-400 { color: #475569 !important; }
