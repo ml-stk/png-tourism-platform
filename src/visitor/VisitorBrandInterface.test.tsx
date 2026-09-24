@@ -9,9 +9,9 @@ describe('visitor brand interface contract', () => {
     expect(source).toContain("import tpaLogo from './assets/png-tpa-logo.png';");
     expect(source).toContain('Discover');
     expect(source).toContain('Papua New Guinea');
-    expect(source).toContain('Featured Destinations');
+    expect(source).toMatch(/Featured\s+Destinations/);
     expect(source).toContain('AI Concierge');
-    expect(source).toContain('<DigitalPassport/>');
+    expect(source).toMatch(/<DigitalPassport\s*\/>/);
     expect(passportSource).toContain('Digital Tourism Passport');
   });
 });
