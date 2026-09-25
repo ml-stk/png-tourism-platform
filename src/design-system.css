@@ -104,6 +104,11 @@ article:has(button + button) img {
 body:has(input[aria-label="Search destinations"]) .text-slate-500 { color: #334155 !important; }
 body:has(input[aria-label="Search destinations"]) .text-slate-600 { color: #1e293b !important; }
 body:has(input[aria-label="Search destinations"]) .text-slate-400 { color: #475569 !important; }
+body:has(input[aria-label="Search destinations"]) input[aria-label="Search destinations"] {
+  color: #0f172a !important;
+  -webkit-text-fill-color: #0f172a !important;
+  caret-color: #0f172a !important;
+}
 body:has(input[aria-label="Search destinations"]) input::placeholder { color: #334155 !important; opacity: 1; }
 body:has(input[aria-label="Search destinations"]) select { color: #0f172a !important; }
 
