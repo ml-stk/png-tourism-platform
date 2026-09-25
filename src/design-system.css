@@ -100,11 +100,12 @@ article:has(button + button) img {
   border-radius: 0;
 }
 
-/* Visitor trip-planner readability: strengthen secondary text on its light cards. */
-section#trip .text-slate-500 { color: #475569 !important; }
-section#trip .text-slate-600 { color: #334155 !important; }
-section#trip .text-slate-400 { color: #475569 !important; }
-section#trip input::placeholder { color: #475569 !important; opacity: 1; }
+/* Visitor trip-planner readability: scope contrast rules to the Trip Planner page itself. */
+body:has(input[aria-label="Search destinations"]) .text-slate-500 { color: #334155 !important; }
+body:has(input[aria-label="Search destinations"]) .text-slate-600 { color: #1e293b !important; }
+body:has(input[aria-label="Search destinations"]) .text-slate-400 { color: #475569 !important; }
+body:has(input[aria-label="Search destinations"]) input::placeholder { color: #334155 !important; opacity: 1; }
+body:has(input[aria-label="Search destinations"]) select { color: #0f172a !important; }
 
 @media (max-width: 1023px) {
   .png-content { min-height: calc(100vh - 69px); }
