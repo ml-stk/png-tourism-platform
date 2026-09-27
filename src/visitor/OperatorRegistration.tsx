@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Building2, CheckCircle2, Send } from 'lucide-react';
+import { apiFetch } from '../api';
 
 type Province = { code: string; name: string };
 
@@ -13,7 +14,7 @@ export default function OperatorRegistration() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetch('/api/v1/provinces', { headers: { Accept: 'application/json' } })
+    apiFetch('/api/v1/provinces')
       .then(response => response.ok ? response.json() : Promise.reject())
       .then(body => setProvinces(Array.isArray(body?.data) ? body.data : []))
       .catch(() => setProvinces([]));
@@ -23,7 +24,7 @@ export default function OperatorRegistration() {
     event.preventDefault();
     setSubmitting(true); setError(''); setMessage('');
     try {
-      const response = await fetch('/api/v1/public/operator-registration', {
+      const response = await apiFetch('/api/v1/public/operator-registration', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({ legalName: legalName.trim(), tradingName: tradingName.trim() || undefined, provinceCode }),
