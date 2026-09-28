@@ -15,6 +15,14 @@ const PROVINCES: ProvinceCode[] = ['NCD','CENTRAL','GULF','MILNE_BAY','ORO','MOR
 
 export async function handleOperatorRegistrationApi(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
   const url = new URL(req.url || '/', 'http://localhost');
+  if (req.method === 'GET' && url.pathname === '/api/v1/public/provinces') {
+    const requestId = req.headers['x-request-id']?.toString() || randomUUID();
+    res.setHeader('x-request-id', requestId);
+    res.setHeader('content-type', 'application/json; charset=utf-8');
+    applySecurityHeaders(res);
+    if (!enforceRateLimit(req, res)) return true;
+    return send(res, 200, { data: PROVINCES.map(code => ({ code, name: provinceName(code) })), requestId });
+  }
   if (req.method !== 'POST' || url.pathname !== '/api/v1/public/operator-registration') return false;
   const requestId = req.headers['x-request-id']?.toString() || randomUUID();
   res.setHeader('x-request-id', requestId);
@@ -34,6 +42,13 @@ export async function handleOperatorRegistrationApi(req: IncomingMessage, res: S
     const status = e?.code === 'VALIDATION_ERROR' ? 400 : e?.code === 'CONFLICT' ? 409 : 500;
     return send(res, status, { error: { code: e?.code || 'INTERNAL_ERROR', message: status === 500 ? 'Registration service unavailable' : e.message }, requestId });
   }
+}
+
+function provinceName(code: ProvinceCode): string {
+  const names: Record<ProvinceCode, string> = {
+    NCD: 'National Capital District', CENTRAL: 'Central Province', GULF: 'Gulf Province', MILNE_BAY: 'Milne Bay Province', ORO: 'Oro Province', MOROBE: 'Morobe Province', MADANG: 'Madang Province', EAST_SEPIK: 'East Sepik Province', WEST_SEPIK: 'West Sepik Province', MANUS: 'Manus Province', NEW_IRELAND: 'New Ireland Province', EAST_NEW_BRITAIN: 'East New Britain Province', WEST_NEW_BRITAIN: 'West New Britain Province', BOUGAINVILLE: 'Autonomous Region of Bougainville', ENGA: 'Enga Province', EASTERN_HIGHLANDS: 'Eastern Highlands Province', SIMBU: 'Simbu Province', WESTERN_HIGHLANDS: 'Western Highlands Province', SOUTHERN_HIGHLANDS: 'Southern Highlands Province', JIWAKA: 'Jiwaka Province', HELA: 'Hela Province', WESTERN: 'Western Province'
+  };
+  return names[code];
 }
 
 function requiredString(value: unknown, field: string): string { if (typeof value !== 'string' || !value.trim()) throwValidation(`${field} is required`); return value.trim(); }
