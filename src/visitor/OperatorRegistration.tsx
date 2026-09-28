@@ -14,7 +14,7 @@ export default function OperatorRegistration() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    apiFetch('/api/v1/provinces')
+    apiFetch('/api/v1/public/provinces')
       .then(response => response.ok ? response.json() : Promise.reject())
       .then(body => setProvinces(Array.isArray(body?.data) ? body.data : []))
       .catch(() => setProvinces([]));
