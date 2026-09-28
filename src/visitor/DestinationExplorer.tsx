@@ -14,8 +14,9 @@ const destinationGuideUrls: Record<string, string> = {
 };
 function withFallbackMedia(d: Destination): Destination {
   const fallbackMedia = destinationMediaFallbacks[d.slug];
-  const hasUsableMedia = Array.isArray(d.media) && Boolean(d.media[0]?.publicUrl);
-  if (hasUsableMedia || !fallbackMedia) return d;
+  const media = Array.isArray(d.media) ? d.media : [];
+  const hasUsableMedia = Boolean(media[0]?.publicUrl);
+  if (hasUsableMedia || !fallbackMedia) return { ...d, media };
   return { ...d, media: [{ id: `fallback-${d.slug}`, publicUrl: fallbackMedia.url, altText: fallbackMedia.altText, caption: fallbackMedia.credit }] };
 }
 function governedFallback(): Destination[] {
@@ -34,7 +35,19 @@ export default function DestinationExplorer() {
       const payload = await response.json();
       const items = Array.isArray(payload?.data?.items) ? payload.data.items : Array.isArray(payload?.data) ? payload.data : [];
       if (!items.length) throw new Error('empty destination projection');
-      setData(items.map(withFallbackMedia)); setSource('live');
+      setData(items.map((d: any) => withFallbackMedia({
+        id: typeof d.id === 'string' ? d.id : String(d.id ?? d.name ?? 'destination'),
+        slug: typeof d.slug === 'string' ? d.slug : String(d.name ?? 'destination').toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+        name: typeof d.name === 'string' ? d.name : 'Destination',
+        provinceCode: typeof d.provinceCode === 'string' ? d.provinceCode : typeof d.province === 'string' ? d.province : '',
+        description: typeof d.description === 'string' ? d.description : undefined,
+        contentVersion: typeof d.contentVersion === 'number' ? d.contentVersion : 1,
+        updatedAt: typeof d.updatedAt === 'string' ? d.updatedAt : new Date().toISOString(),
+        freshness: d.freshness === 'stale' ? 'stale' : 'fresh',
+        media: Array.isArray(d.media) ? d.media : [],
+        qrPath: typeof d.qrPath === 'string' ? d.qrPath : `/destination/${d.name ?? 'destination'}`,
+        offlineCacheKey: typeof d.offlineCacheKey === 'string' ? d.offlineCacheKey : `destination:${d.id ?? d.name ?? 'destination'}:v1`,
+      }))); setSource('live');
     } catch {
       try {
         const response = await fetch('./destinations-live.json', { cache: 'no-store' });
