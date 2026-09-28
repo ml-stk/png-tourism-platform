@@ -1,0 +1,10 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "png-tourism-platform",
+  "compatibility_date": "2026-09-28",
+  "assets": {
+    "directory": "./dist"
+  },
+  "preview_urls": true,
+  "previews": {}
+}
