@@ -12,10 +12,19 @@ export function applySecurityHeaders(res: ServerResponse): void {
   if (process.env.NODE_ENV === 'production') res.setHeader('strict-transport-security', 'max-age=31536000; includeSubDomains');
 }
 
+function originAllowed(origin: string, allowed: string[]): boolean {
+  return allowed.some(entry => {
+    if (entry === origin) return true;
+    if (!entry.startsWith('https://*.')) return false;
+    const suffix = entry.slice('https://*.'.length);
+    return origin === `https://${suffix}` || origin.endsWith(`.${suffix}`);
+  });
+}
+
 export function applyCors(req: IncomingMessage, res: ServerResponse): boolean {
   const origin = req.headers.origin;
   const allowed = (process.env.CORS_ALLOWED_ORIGIN || '').split(',').map(value => value.trim()).filter(Boolean);
-  if (!origin || !allowed.includes(origin)) return !origin;
+  if (!origin || !originAllowed(origin, allowed)) return !origin;
   res.setHeader('access-control-allow-origin', origin);
   res.setHeader('vary', 'Origin');
   res.setHeader('access-control-allow-methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
