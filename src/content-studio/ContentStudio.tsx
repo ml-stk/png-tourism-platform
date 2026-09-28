@@ -1,6 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ContentItem, Destination, Province } from '../domain/types';
-const api = async <T,>(path: string, init?: RequestInit): Promise<T> => { const response = await fetch(path, { ...init, headers: { 'content-type': 'application/json', ...(init?.headers || {}) } }); const body = await response.json(); if (!response.ok) throw new Error(body?.error?.message || 'Request failed'); return body.data as T; };
+import { apiFetch } from '../api';
+
+const api = async <T,>(path: string, init?: RequestInit): Promise<T> => {
+ const response = await apiFetch(path, { ...init, headers: { 'content-type': 'application/json', ...(init?.headers || {}) } });
+ const body = await response.json();
+ if (!response.ok) throw new Error(body?.error?.message || 'Request failed');
+ return body.data as T;
+};
+
 export function ContentStudio() {
  const [destinations,setDestinations]=useState<Destination[]>([]),[content,setContent]=useState<ContentItem[]>([]),[provinces,setProvinces]=useState<Province[]>([]),[selected,setSelected]=useState(''),[tab,setTab]=useState<'destinations'|'content'>('destinations'),[status,setStatus]=useState('Loading editorial workspace…'),[query,setQuery]=useState(''),[province,setProvince]=useState('');
  const refresh=async()=>{setStatus('Refreshing governed content…');try{const[d,c,p]=await Promise.all([api<{items:Destination[]}>('/api/v1/destinations?limit=100'),api<{items:ContentItem[]}>('/api/v1/content?limit=100'),api<Province[]>('/api/v1/provinces')]);setDestinations(d.items||[]);setContent(c.items||[]);setProvinces(p||[]);setStatus('Editorial data is current')}catch(e){setStatus(e instanceof Error?e.message:'Unable to load editorial data')}}; useEffect(()=>{void refresh()},[]);
