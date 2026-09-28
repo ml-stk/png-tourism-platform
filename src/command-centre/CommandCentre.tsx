@@ -3,7 +3,7 @@ import { Activity, Building2, Compass, RefreshCw, Users, type LucideIcon } from 
 import OperatorReviewQueue from './OperatorReviewQueue';
 import { apiFetch } from '../api';
 
-type Province = { id: string; code: string; name: string; slug: string };
+type Province = { id?: string; code: string; name: string; slug?: string };
 type ProvinceInsight = { provinceCode: string; publishedDestinations: number; activeOperators: number; compliantOperators: number; publishedExperiences: number; visitorSignals: number; engagementSignals: number };
 type Report = { generatedAt: string; period: string; snapshot: { visitors: number; publishedDestinations: number; activeOperators: number; compliantOperators: number; publishedExperiences: number; provincesRepresented: number }; engagement: { totalSignals: number; experienceViews: number; savedExperiences: number; itineraryAdds: number; qrHandoffs: number }; provinces: ProvinceInsight[]; freshness: { source: string; generatedAt: string; governed: true }[] };
 type MetricCard = { label: string; value: number; Icon: LucideIcon };
@@ -12,7 +12,7 @@ type EngagementMetric = { label: string; value: number };
 const periods = ['day', 'week', 'month', 'quarter', 'year'];
 export default function CommandCentre() {
   const [period, setPeriod] = useState('month'); const [province, setProvince] = useState(''); const [provinces, setProvinces] = useState<Province[]>([]); const [report, setReport] = useState<Report | null>(null); const [loading, setLoading] = useState(true); const [error, setError] = useState('');
-  const load = async () => { setLoading(true); setError(''); try { const qs = new URLSearchParams({ period }); if (province) qs.set('province', province); const [response, provinceResponse] = await Promise.all([apiFetch(`/api/v1/intelligence/report?${qs}`), apiFetch('/api/v1/provinces')]); if (!response.ok) throw new Error('Unable to load Command Centre data'); if (!provinceResponse.ok) throw new Error('Unable to load provinces'); const [body, provinceBody] = await Promise.all([response.json(), provinceResponse.json()]); setReport(body.data); setProvinces(provinceBody.data || []); } catch (e) { setError(e instanceof Error ? e.message : 'Unable to load Command Centre data'); } finally { setLoading(false); } };
+  const load = async () => { setLoading(true); setError(''); try { const qs = new URLSearchParams({ period }); if (province) qs.set('province', province); const [response, provinceResponse] = await Promise.all([apiFetch(`/api/v1/command-centre/report?${qs}`), apiFetch('/api/v1/public/provinces')]); if (!response.ok) throw new Error(response.status === 401 ? 'Authority sign-in is required to load Command Centre data' : 'Unable to load Command Centre data'); if (!provinceResponse.ok) throw new Error('Unable to load provinces'); const [body, provinceBody] = await Promise.all([response.json(), provinceResponse.json()]); setReport(body.data); setProvinces(provinceBody.data || []); } catch (e) { setError(e instanceof Error ? e.message : 'Unable to load Command Centre data'); } finally { setLoading(false); } };
   useEffect(() => { void load(); }, [period, province]);
   const snapshot = report?.snapshot;
   const metricCards: MetricCard[] = snapshot ? [
