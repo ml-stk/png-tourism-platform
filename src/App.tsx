@@ -10,6 +10,7 @@ import ActivationHub from './activation/ActivationHub';
 import { ContentStudio } from './ContentStudioPage';
 import VisitorHome from './VisitorHome';
 import AdminGate from './auth/AdminGate';
+import { apiFetch } from './api';
 
 type View = 'overview' | 'visitor' | 'industry' | 'destinations' | 'activations' | 'insights';
 
@@ -129,7 +130,7 @@ function IndustryAdmin() {
     setLoading(true);
     setError('');
     try {
-      const response = await fetch('/api/v1/public/operators', { headers: { Accept: 'application/json' } });
+      const response = await apiFetch('/api/v1/public/operators');
       if (!response.ok) throw new Error('Unable to load published operator records');
       const body = await response.json();
       const items = Array.isArray(body?.data?.items) ? body.data.items : Array.isArray(body?.data) ? body.data : [];
@@ -168,7 +169,7 @@ function Insights() {
     setLoading(true);
     setError('');
     try {
-      const response = await fetch(`/api/v1/command-centre/report?${new URLSearchParams({ period })}`, { headers: { Accept: 'application/json' } });
+      const response = await apiFetch(`/api/v1/command-centre/report?${new URLSearchParams({ period })}`);
       if (!response.ok) throw new Error(response.status === 401 ? 'Authentication required' : response.status === 403 ? 'Your account is not authorised for tourism intelligence' : 'Unable to load governed tourism intelligence');
       const body = await response.json();
       setReport(body?.data ?? null);
