@@ -86,15 +86,6 @@ export default function TripPlanner() {
       if (!nextPlaces.length) throw new Error('Destination request returned no valid published destinations');
       setPlaces(nextPlaces); setOffline(false);
       setStops(current => current.filter(stop => nextPlaces.some(place => place.id === stop.id)));
-      try {
-        const response = await fetchWithTimeout(`${API_ORIGIN}/api/v1/industry/experiences`, { headers: { Accept: 'application/json' } }, 8000);
-        if (response.ok) {
-          const payload = await response.json() as { data?: unknown };
-          if (Array.isArray(payload.data)) setExperiences((payload.data as Experience[]).filter(item => item.status === 'published'));
-        }
-      } catch (experienceError) {
-        console.warn('[TripPlanner] optional experiences request failed', experienceError);
-      }
     } catch (loadError) {
       const detail = loadError instanceof DOMException && loadError.name === 'AbortError'
         ? 'Live tourism data request timed out.'
@@ -106,6 +97,24 @@ export default function TripPlanner() {
       setError(`Live tourism data is unavailable right now. Showing the governed visitor-safe destination set. (${detail})`);
     } finally { setLoading(false); }
   };
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadOptionalExperiences = async () => {
+      try {
+        const response = await fetchWithTimeout(`${API_ORIGIN}/api/v1/industry/experiences`, { headers: { Accept: 'application/json' } }, 15000);
+        if (!response.ok || cancelled) return;
+        const payload = await response.json() as { data?: unknown };
+        if (!cancelled && Array.isArray(payload.data)) {
+          setExperiences((payload.data as Experience[]).filter(item => item.status === 'published'));
+        }
+      } catch {
+        // Optional visitor enrichment: silently retain the empty/previous experience set.
+      }
+    };
+    void loadOptionalExperiences();
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     void loadPublishedData();
