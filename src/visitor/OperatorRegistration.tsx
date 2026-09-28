@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Building2, CheckCircle2, Send } from 'lucide-react';
-import { apiFetch } from '../api';
+import { publicApiFetch } from '../api';
+import { PNG_PROVINCES } from '../provinces';
 
 type Province = { code: string; name: string };
 
 export default function OperatorRegistration() {
-  const [provinces, setProvinces] = useState<Province[]>([]);
+  const [provinces, setProvinces] = useState<Province[]>(PNG_PROVINCES);
   const [legalName, setLegalName] = useState('');
   const [tradingName, setTradingName] = useState('');
   const [provinceCode, setProvinceCode] = useState('');
@@ -14,17 +15,20 @@ export default function OperatorRegistration() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    apiFetch('/api/v1/public/provinces')
+    publicApiFetch('/api/v1/public/provinces')
       .then(response => response.ok ? response.json() : Promise.reject())
-      .then(body => setProvinces(Array.isArray(body?.data) ? body.data : []))
-      .catch(() => setProvinces([]));
+      .then(body => {
+        const items = Array.isArray(body?.data) ? body.data : [];
+        if (items.length) setProvinces(items);
+      })
+      .catch(() => undefined);
   }, []);
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     setSubmitting(true); setError(''); setMessage('');
     try {
-      const response = await apiFetch('/api/v1/public/operator-registration', {
+      const response = await publicApiFetch('/api/v1/public/operator-registration', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({ legalName: legalName.trim(), tradingName: tradingName.trim() || undefined, provinceCode }),
