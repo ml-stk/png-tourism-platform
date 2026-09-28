@@ -20,6 +20,10 @@ jobs:
     name: Build Pages Artifact
     runs-on: ubuntu-latest
 
+    env:
+      # GitHub Pages publishes this app below the repository path.
+      VITE_BASE_PATH: /png-tourism-platform/
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
