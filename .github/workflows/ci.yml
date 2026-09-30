@@ -1,77 +1,69 @@
 name: NTDP CI
-
 on:
   push:
-    branches:
-      - main
-      - "**"
   pull_request:
-    branches:
-      - main
   workflow_dispatch:
-
+  workflow_call:
 permissions:
   contents: read
-
 jobs:
   verify:
-    name: Build and Test
-    runs-on: ubuntu-latest
-
+    name: Candidate Release and Recovery
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgis/postgis:17-3.5
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ci-only-password
+          POSTGRES_DB: ntdp_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ntdp_ci"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DATABASE_URL: postgresql://postgres:ci-only-password@127.0.0.1:5432/ntdp_ci
+      RECOVERY_ADMIN_URL: postgresql://postgres:ci-only-password@127.0.0.1:5432/postgres
+      BACKUP_DIRECTORY: ${{ github.workspace }}/backups/ci
+      PGPASSWORD: ci-only-password
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: 22
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Run tests
-        run: npm run test
-
-      - name: Build frontend
-        run: npm run build
-
-      - name: Build server
-        run: npm run build:server
-
-  api-smoke:
-    name: API Smoke Test
-    runs-on: ubuntu-latest
-    needs: verify
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+          node-version: 24.19.0
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Unit and assembled-server regressions
+        run: npm test
+      - name: Build frontend and server
+        run: |
+          npm run build
+          npm run build:server
+      - name: Install matching database tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-common ca-certificates
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y postgresql-client-17
+      - name: Bootstrap isolated database roles
+        run: psql -h 127.0.0.1 -U postgres -d ntdp_ci -v ON_ERROR_STOP=1 -f scripts/ci-database-bootstrap.sql
+      - name: Replay migrations and verify ledger
+        run: |
+          npm run db:migrate
+          npm run db:migrate
+      - name: Test the candidate server with database-backed identities
+        run: npm run test:release
+      - name: Back up schema, data and role definitions
+        run: |
+          mkdir -p backups
+          npm run backup
+      - name: Restore and compare data and access controls
+        run: npm run test:recovery
+      - name: Save recovery verification evidence
+        uses: actions/upload-artifact@v4
         with:
-          node-version: 22
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Run API smoke test
-        run: node scripts/api-smoke.mjs
-
-  gateway-smoke:
-    name: API Gateway Smoke Acceptance
-    runs-on: ubuntu-latest
-    needs: verify
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Run gateway smoke acceptance
-        run: node scripts/gateway-smoke.mjs
+          name: recovery-verification-${{ github.run_id }}-${{ github.job }}
+          path: backups/ci/restore-result.json
+          if-no-files-found: error

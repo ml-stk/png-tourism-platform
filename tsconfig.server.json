@@ -10,5 +10,6 @@
     "rootDir": "src",
     "noEmit": false
   },
-  "include": ["src/server/**/*.ts", "src/persistence/**/*.ts", "src/services/**/*.ts", "src/domain/**/*.ts", "src/auth/**/*.ts"]
+  "include": ["src/server/**/*.ts", "src/persistence/**/*.ts", "src/services/**/*.ts", "src/domain/**/*.ts", "src/auth/**/*.ts"],
+  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]
 }

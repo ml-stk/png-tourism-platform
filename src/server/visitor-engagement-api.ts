@@ -1,3 +1,4 @@
+import { readJson } from './request-body';
 import { randomUUID } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Pool } from 'pg';
@@ -34,12 +35,4 @@ export async function handleVisitorEngagementApi(req: IncomingMessage, res: Serv
   }
 }
 
-async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> {
-  return new Promise((resolve, reject) => {
-    let raw = '';
-    req.on('data', chunk => { raw += chunk; });
-    req.on('end', () => { try { const parsed = JSON.parse(raw); if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) reject(new Error('object required')); else resolve(parsed as Record<string, unknown>); } catch { reject(new Error('invalid json')); } });
-    req.on('error', reject);
-  });
-}
 function send(res: ServerResponse, status: number, body: unknown) { res.statusCode = status; res.end(JSON.stringify(body)); return true; }

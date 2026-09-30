@@ -1,5 +1,9 @@
 node_modules/
 dist/
+dist-server/
+*.tsbuildinfo
+backups/
+recovery-evidence/
 .env
 .env.*
 !.env.example
@@ -8,3 +12,4 @@ coverage/
 .vscode/
 .idea/
 *.log
+review/

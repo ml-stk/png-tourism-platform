@@ -1,3 +1,4 @@
+import { readJson } from './request-body';
 import { randomUUID } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Pool } from 'pg';
@@ -52,6 +53,5 @@ function provinceName(code: ProvinceCode): string {
 }
 
 function requiredString(value: unknown, field: string): string { if (typeof value !== 'string' || !value.trim()) throwValidation(`${field} is required`); return value.trim(); }
-async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> { const chunks: Buffer[] = []; let size = 0; const maxBytes = Number(process.env.REQUEST_BODY_MAX_BYTES || 1_048_576); for await (const c of req) { const chunk = Buffer.from(c); size += chunk.length; if (size > maxBytes) throwValidation('Request body exceeds maximum size'); chunks.push(chunk); } try { const parsed: unknown = JSON.parse(Buffer.concat(chunks).toString('utf8')); if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error(); return parsed as Record<string, unknown>; } catch { throwValidation('Invalid JSON body'); } }
 function throwValidation(message: string): never { const error: Error & { code?: string } = new Error(message); error.code = 'VALIDATION_ERROR'; throw error; }
 function send(res: ServerResponse, status: number, body: unknown): true { res.statusCode = status; res.end(JSON.stringify(body)); return true; }

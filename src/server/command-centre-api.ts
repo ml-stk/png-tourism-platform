@@ -5,6 +5,7 @@ import { PostgresOperatorRepository, PostgresDestinationRepository, PostgresCont
 import { PostgresVisitorEngagementRepository } from '../persistence/visitor-engagement-repository';
 import { CommandCentreService } from '../services/command-centre-service';
 import { requirePermission, requireProvinceAccess } from '../auth/authorization';
+import { canReadNational, requireAuthority } from './resource-access';
 import { authenticate as authenticateApi } from './api';
 import { applySecurityHeaders, enforceRateLimit, requestBodyLimit } from './security';
 import type { MetricPeriod } from '../domain/intelligence';
@@ -31,6 +32,8 @@ export async function handleCommandCentreApi(req: IncomingMessage, res: ServerRe
     requestBodyLimit(req);
     const context = await authenticate(req, requestId);
     requirePermission(context, 'intelligence:read');
+    // The report contains a national snapshot even when its detail rows are filtered.
+    if (!canReadNational(context)) requireAuthority(context);
     const rawPeriod = url.searchParams.get('period') || 'month';
     if (!periods.has(rawPeriod as MetricPeriod)) throwValidation('Invalid reporting period');
     const rawProvince = url.searchParams.get('province');

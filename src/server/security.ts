@@ -17,18 +17,28 @@ function originAllowed(origin: string, allowed: string[]): boolean {
     if (entry === origin) return true;
     if (!entry.startsWith('https://*.')) return false;
     const suffix = entry.slice('https://*.'.length);
-    return origin === `https://${suffix}` || origin.endsWith(`.${suffix}`);
+    try {
+      const parsed = new URL(origin);
+      return parsed.origin === origin && parsed.protocol === 'https:' && !parsed.port &&
+        (parsed.hostname === suffix || parsed.hostname.endsWith(`.${suffix}`));
+    } catch { return false; }
   });
 }
 
 export function applyCors(req: IncomingMessage, res: ServerResponse): boolean {
   const origin = req.headers.origin;
   const allowed = (process.env.CORS_ALLOWED_ORIGIN || '').split(',').map(value => value.trim()).filter(Boolean);
-  if (!origin || !originAllowed(origin, allowed)) return !origin;
+  if (!origin) return true;
+  if (!originAllowed(origin, allowed)) {
+    res.statusCode = 403;
+    res.setHeader('content-type', 'application/json; charset=utf-8');
+    res.end(JSON.stringify({ error: { code: 'FORBIDDEN', message: 'Origin is not allowed' } }));
+    return false;
+  }
   res.setHeader('access-control-allow-origin', origin);
   res.setHeader('vary', 'Origin');
   res.setHeader('access-control-allow-methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
-  res.setHeader('access-control-allow-headers', 'Authorization, Content-Type, Accept, X-Request-Id');
+  res.setHeader('access-control-allow-headers', 'Authorization, Content-Type, Accept, X-Request-Id, X-Api-Key');
   res.setHeader('access-control-max-age', '600');
   if (req.method === 'OPTIONS') { res.statusCode = 204; res.end(); return false; }
   return true;

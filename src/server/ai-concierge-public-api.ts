@@ -1,3 +1,4 @@
+import { readJson } from './request-body';
 import { Pool } from 'pg';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { AiConciergeService } from '../services/ai-concierge-service';
@@ -58,20 +59,6 @@ function parseProvince(value: unknown): ProvinceCode | undefined {
     throw Object.assign(new Error('Invalid province code'), { code: 'VALIDATION_ERROR' });
   }
   return value as ProvinceCode;
-}
-
-async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> {
-  const chunks: Buffer[] = [];
-  for await (const chunk of req) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-  if (!chunks.length) return {};
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(Buffer.concat(chunks).toString('utf8'));
-  } catch {
-    throw Object.assign(new Error('Valid JSON object required'), { code: 'VALIDATION_ERROR' });
-  }
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw Object.assign(new Error('JSON object required'), { code: 'VALIDATION_ERROR' });
-  return parsed as Record<string, unknown>;
 }
 
 function send(res: ServerResponse, status: number, body: unknown): boolean {

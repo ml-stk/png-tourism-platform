@@ -1,3 +1,5 @@
+import { requireAuthority } from './resource-access';
+import { readJson } from './request-body';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { randomUUID } from 'node:crypto';
 import { Pool } from 'pg';
@@ -13,6 +15,7 @@ export async function handleNtdpDistributionApi(req: IncomingMessage, res: Serve
   if (!url.pathname.startsWith('/api/v1/ntdp/distribution/')) return false;
   try {
     const context = await authenticate(req, req.headers['x-request-id']?.toString() || randomUUID());
+    requireAuthority(context);
     if (req.method === 'GET' && url.pathname === '/api/v1/ntdp/distribution/publications') {
       requirePermission(context, 'distribution:read');
       return send(res, 200, { data: await service.listPublications(url.searchParams.get('channel') || undefined, url.searchParams.get('status') || undefined), requestId: context.requestId });
@@ -45,12 +48,11 @@ export async function handleNtdpDistributionApi(req: IncomingMessage, res: Serve
       const parts = url.pathname.split('/');
       return send(res, 200, { data: await service.partnerEvents(parts[parts.length - 2]), requestId: context.requestId });
     }
-    return send(res, 404, { error: { code: 'NOT_FOUND', message: 'Distribution lifecycle route not found' }, requestId: context.requestId });
+    return false;
   } catch (e: any) {
     const status = e?.code === 'UNAUTHORIZED' ? 401 : e?.code === 'FORBIDDEN' ? 403 : e?.code === 'VALIDATION_ERROR' ? 400 : 500;
     return send(res, status, { error: { code: e?.code || 'INTERNAL_ERROR', message: status === 500 ? 'Internal server error' : e.message }, requestId: req.headers['x-request-id']?.toString() || randomUUID() });
   }
 }
-async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> { const chunks: Buffer[] = []; for await (const chunk of req) chunks.push(Buffer.from(chunk)); try { const value: unknown = JSON.parse(Buffer.concat(chunks).toString('utf8')); if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(); return value as Record<string, unknown>; } catch { const e: any = new Error('Invalid JSON body'); e.code = 'VALIDATION_ERROR'; throw e; } }
 function validation(res: ServerResponse, requestId: string, message: string): boolean { return send(res, 400, { error: { code: 'VALIDATION_ERROR', message }, requestId }); }
 function send(res: ServerResponse, status: number, body: unknown): boolean { res.statusCode = status; res.setHeader('content-type', 'application/json; charset=utf-8'); res.end(JSON.stringify(body)); return true; }
