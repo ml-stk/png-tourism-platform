@@ -19,6 +19,7 @@
     "test:migrations:local": "node scripts/check-local-migrations.mjs",
     "test:native:local": "node scripts/check-native-local.mjs",
     "test:release": "node scripts/release-check.mjs",
+    "test:supabase:staging": "node scripts/supabase-staging-check.mjs",
     "backup": "node scripts/database-backup.mjs",
     "test:recovery": "node scripts/recovery-check.mjs"
   },
